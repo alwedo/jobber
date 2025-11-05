@@ -17,9 +17,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-// j.GetOffers() returns offers in the db for a given query
-// j.RunQuery() runs the current query, add new offers to the db returns the offers
-
 type Jobber struct {
 	client *http.Client
 	logger *slog.Logger
