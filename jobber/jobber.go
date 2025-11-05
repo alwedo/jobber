@@ -17,6 +17,12 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+const (
+	OneDayAgo    = "r86400"
+	ThreeDaysAgo = "r259200"
+	FiveDaysAgo  = "r432000"
+)
+
 type Jobber struct {
 	client *http.Client
 	logger *slog.Logger
