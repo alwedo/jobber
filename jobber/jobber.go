@@ -23,8 +23,8 @@ const (
 	ThreeDaysAgo = "r259200"
 	FiveDaysAgo  = "r432000"
 
-	paramKeywords = "keywords" // Search keywords, ie. "golang"
-	paramLocation = "location" // Location of the search, ie. "Berlin"
+	ParamKeywords = "keywords" // Search keywords, ie. "golang"
+	ParamLocation = "location" // Location of the search, ie. "Berlin"
 
 	/*	Time Posted Range, ie.
 		- r86400` = Past 24 hours
@@ -32,7 +32,7 @@ const (
 		- `r2592000` = Past month
 		- `rALL` = Any time
 	*/
-	paramFTPR = "f_TPR"
+	ParamFTPR = "f_TPR"
 
 	/*Job Type, ie.
 	- F` = Full-time
@@ -46,7 +46,7 @@ const (
 	Currently only the option for P is implemented.
 	By default F will be used.
 	*/
-	paramFJT = "f_JT"
+	ParamFJT = "f_JT"
 )
 
 type Jobber struct {
@@ -122,15 +122,15 @@ func (j *Jobber) RunQuery(query *db.Query) []*db.Offer {
 // fetchOffers gets job offers from LinkedIn based on the passed query params.
 func (j *Jobber) fetchOffers(query *db.Query) (io.ReadCloser, error) {
 	queryParams := url.Values{}
-	queryParams.Add(paramKeywords, query.Keywords)
+	queryParams.Add(ParamKeywords, query.Keywords)
 	if query.Location != "" {
-		queryParams.Add(paramLocation, query.Location)
+		queryParams.Add(ParamLocation, query.Location)
 	}
 	if query.FTpr != "" {
-		queryParams.Add(paramFTPR, query.FTpr)
+		queryParams.Add(ParamFTPR, query.FTpr)
 	}
 	if query.FJt != "" {
-		queryParams.Add(paramFJT, query.FJt)
+		queryParams.Add(ParamFJT, query.FJt)
 	}
 
 	url, err := url.Parse("https://www.linkedin.com/jobs/search")

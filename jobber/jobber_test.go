@@ -111,17 +111,17 @@ func TestFetchOffers(t *testing.T) {
 	}
 	defer resp.Close()
 	values := mockResp.req.URL.Query()
-	if values.Get(paramKeywords) != "golang" {
-		t.Errorf("expected 'keywords' in query params to be 'golang', got %s", values.Get(paramKeywords))
+	if values.Get(ParamKeywords) != "golang" {
+		t.Errorf("expected 'keywords' in query params to be 'golang', got %s", values.Get(ParamKeywords))
 	}
-	if values.Get(paramLocation) != "the moon" {
-		t.Errorf("expected 'location' in query params to be 'the moon', got %s", values.Get(paramLocation))
+	if values.Get(ParamLocation) != "the moon" {
+		t.Errorf("expected 'location' in query params to be 'the moon', got %s", values.Get(ParamLocation))
 	}
-	if values.Get(paramFTPR) != "cuak" {
-		t.Errorf("expected 'f_TPR' in query params to be 'cuak', got %s", values.Get(paramFTPR))
+	if values.Get(ParamFTPR) != "cuak" {
+		t.Errorf("expected 'f_TPR' in query params to be 'cuak', got %s", values.Get(ParamFTPR))
 	}
-	if values.Get(paramFJT) != "yes" {
-		t.Errorf("expected 'f_JT' in query params to be 'yes', got %s", values.Get(paramFJT))
+	if values.Get(ParamFJT) != "yes" {
+		t.Errorf("expected 'f_JT' in query params to be 'yes', got %s", values.Get(ParamFJT))
 	}
 	if mockResp.req.URL.Host != "www.linkedin.com" {
 		t.Errorf("expected host to be 'www.linkedin.com', got %s", mockResp.req.URL.Host)
