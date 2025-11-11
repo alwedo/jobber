@@ -103,10 +103,13 @@ func (j *Jobber) RunQuery(query *db.Query) []*db.Offer {
 	// Existing offers in the DB should not be added due to the UNIQUE ID constrain.
 	for _, o := range newOffers {
 		if err := j.db.CreateOffer(ctx, &o); err != nil {
-			// We log an error creating an offer in DB as warning since
-			// we do want exiting offers in the DB not to be created again.
-			// TODO: disassociate this error and log a warning, but an error for the rest.w
-			j.logger.Warn("CreateOffer in jobber.RunQuery", slog.String("error", err.Error()))
+			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+				// We log an error creating an offer in DB as info since
+				// we do want exiting offers in the DB not to be created again.
+				j.logger.Info(o.ID+" already exists", slog.String("error", err.Error()))
+			} else {
+				j.logger.Error("CreateOffer in jobber.RunQuery", slog.String("error", err.Error()))
+			}
 		}
 	}
 
@@ -114,7 +117,6 @@ func (j *Jobber) RunQuery(query *db.Query) []*db.Offer {
 	offers, err := j.db.ListOffers(ctx, query.ID)
 	if err != nil {
 		j.logger.Error("ListOffers in jobber.RunQuery", slog.String("error", err.Error()))
-		return []*db.Offer{}
 	}
 	return offers
 }
