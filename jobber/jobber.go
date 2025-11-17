@@ -3,7 +3,6 @@
 package jobber
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,13 +17,9 @@ import (
 )
 
 const (
-	// Time Posted Range (f_TPR) values
-	OneDayAgo    = "r86400"
-	ThreeDaysAgo = "r259200"
-	FiveDaysAgo  = "r432000"
-
-	ParamKeywords = "keywords" // Search keywords, ie. "golang"
-	ParamLocation = "location" // Location of the search, ie. "Berlin"
+	paramKeywords = "keywords" // Search keywords, ie. "golang"
+	paramLocation = "location" // Location of the search, ie. "Berlin"
+	paramStart    = "start"    // Start of the pagination, in intervals of 10s, ie. "10"
 
 	/*	Time Posted Range, ie.
 		- r86400` = Past 24 hours
@@ -32,21 +27,10 @@ const (
 		- `r2592000` = Past month
 		- `rALL` = Any time
 	*/
-	ParamFTPR = "f_TPR"
-
-	/*Job Type, ie.
-	- F` = Full-time
-	- `P` = Part-time
-	- `C` = Contract
-	- `T` = Temporary
-	- `I` = Internship
-	- `V` = Volunteer
-	- `O` = Other
-
-	Currently only the option for P is implemented.
-	By default F will be used.
-	*/
-	ParamFJT = "f_JT"
+	paramFTPR      = "f_TPR"
+	lastWeek       = "r604800" // Past week
+	searchInterval = 10        // LinkedIn pagination interval
+	linkedInURL    = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 )
 
 type Jobber struct {
@@ -63,101 +47,48 @@ func New(log *slog.Logger, db *db.Queries) *Jobber {
 	}
 }
 
-func (j *Jobber) ListQueries() []*db.Query {
-	qs, err := j.db.ListQueries(context.Background())
-	if err != nil {
-		j.logger.Error("ListQueries in jobber.ListQueries", slog.String("error", err.Error()))
-	}
-	return qs
-}
+func (j *Jobber) PerformQuery(query *db.Query) ([]db.CreateOfferParams, error) {
+	var totalOffers []db.CreateOfferParams
+	var offers []db.CreateOfferParams
 
-func (j *Jobber) NewQuery(q *db.CreateQueryParams) *db.Query {
-	query, err := j.db.CreateQuery(context.Background(), q)
-	if err != nil {
-		j.logger.Error("CreateQuery in jobber.NewQuery", slog.String("error", err.Error()))
-	}
-	return query
-}
-
-// RunQuery runs the provided query against linkedin, parses the response,
-// adds the resultant offers to the db and returns the updated list of offers.
-func (j *Jobber) RunQuery(query *db.Query) []*db.Offer {
-	ctx := context.Background()
-
-	// Fetch offers
-	resp, err := j.fetchOffers(query)
-	if err != nil {
-		j.logger.Error("fetchOffers in jobber.RunQuery", slog.String("error", err.Error()))
-		return []*db.Offer{}
-	}
-	defer resp.Close()
-
-	// Parse results
-	newOffers, err := j.parseLinkedinBody(resp, query.ID)
-	if err != nil {
-		j.logger.Error("parse in RunQuery", slog.String("error", err.Error()))
-		return []*db.Offer{}
-	}
-
-	// Add offers to DB.
-	// Existing offers in the DB should not be added due to the UNIQUE ID constrain.
-	for _, o := range newOffers {
-		if err := j.db.CreateOffer(ctx, &o); err != nil {
-			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-				// We log an error creating an offer in DB as info since
-				// we do want exiting offers in the DB not to be created again.
-				j.logger.Info(o.ID+" already exists", slog.String("error", err.Error()))
-			} else {
-				j.logger.Error("CreateOffer in jobber.RunQuery", slog.String("error", err.Error()))
-			}
+	for i := 0; i == 0 || len(offers) == searchInterval; i += searchInterval {
+		resp, err := j.fetchOffers(query, i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetchOffers in PerformQuery: %v", err)
 		}
+		offers, err = j.parseLinkedinBody(resp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse LinkedIn body PerformQuery: %v", err)
+		}
+		totalOffers = append(totalOffers, offers...)
 	}
 
-	// List all offers to return.
-	offers, err := j.db.ListOffers(ctx, query.ID)
-	if err != nil {
-		j.logger.Error("ListOffers in jobber.RunQuery", slog.String("error", err.Error()))
-	}
-	return offers
-}
-
-func (j *Jobber) IgnoreOffer(queryID int64, offerID string) []*db.Offer {
-	ctx := context.Background()
-	if err := j.db.IgnoreOffer(ctx, offerID); err != nil {
-		j.logger.Error("IgnoreOffer in jobber.IgnoreOffer", slog.String("error", err.Error()))
-	}
-	offers, err := j.db.ListOffers(ctx, queryID)
-	if err != nil {
-		j.logger.Error("ListOffers in jobber.IgnoreOffer", slog.String("error", err.Error()))
-	}
-	return offers
+	return totalOffers, nil
 }
 
 // fetchOffers gets job offers from LinkedIn based on the passed query params.
-func (j *Jobber) fetchOffers(query *db.Query) (io.ReadCloser, error) {
-	queryParams := url.Values{}
-	queryParams.Add(ParamKeywords, query.Keywords)
+func (j *Jobber) fetchOffers(query *db.Query, start int) (io.ReadCloser, error) {
+	qp := url.Values{}
+	qp.Add(paramKeywords, query.Keywords)
+	qp.Add(paramFTPR, lastWeek)
 	if query.Location != "" {
-		queryParams.Add(ParamLocation, query.Location)
+		qp.Add(paramLocation, query.Location)
 	}
-	if query.FTpr != "" {
-		queryParams.Add(ParamFTPR, query.FTpr)
-	}
-	if query.FJt != "" {
-		queryParams.Add(ParamFJT, query.FJt)
+	if start != 0 {
+		qp.Add(paramStart, strconv.Itoa(start))
 	}
 
-	url, err := url.Parse("https://www.linkedin.com/jobs/search")
+	url, err := url.Parse(linkedInURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
-	url.RawQuery = queryParams.Encode()
+	url.RawQuery = qp.Encode()
 
 	resp, err := j.client.Get(url.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("received status code: %d", resp.StatusCode)
 	}
 	return resp.Body, nil
@@ -165,30 +96,19 @@ func (j *Jobber) fetchOffers(query *db.Query) (io.ReadCloser, error) {
 
 // Parse parses an HTML document and returns a list of jobs.
 // This is specifically tied to LinkedIn job search page.
-func (j *Jobber) parseLinkedinBody(body io.ReadCloser, queryID int64) ([]db.CreateOfferParams, error) {
+func (j *Jobber) parseLinkedinBody(body io.ReadCloser) ([]db.CreateOfferParams, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
+	body.Close()
 	var jobs []db.CreateOfferParams
-
-	// Counts total jobs listed in the title.
-	totalJobs, err := strconv.Atoi(strings.Split(doc.Find("title").Text(), " ")[0])
-	if err != nil {
-		j.logger.Error("strconv.Atoi in parse", slog.String("error", err.Error()))
-	}
-	if totalJobs > 60 {
-		// Currently I don't know how to paginate on linkedin and if
-		// there are mote than 60 jobs we log a warning.
-		// TODO: investigate how to paginate multiple jobs.
-		j.logger.Error("More than 60 jobs found for this search", slog.Int("total jobs found", totalJobs))
-	}
 
 	// Find all job listings
 	doc.Find("li").Each(func(_ int, s *goquery.Selection) {
 		// Check if this li contains a job card
 		if s.Find(".base-search-card").Length() > 0 {
-			job := db.CreateOfferParams{QueryID: queryID}
+			job := db.CreateOfferParams{}
 
 			// Extract Job ID from data-entity-urn
 			if urn, exists := s.Find("[data-entity-urn]").Attr("data-entity-urn"); exists {

@@ -1,35 +1,31 @@
+-- name: CreateQuery :exec
+INSERT INTO
+    queries (keywords, location)
+VALUES
+    (?, ?);
+
+-- name: GetQuery :one
+SELECT
+    *
+FROM
+    queries
+WHERE
+    keywords = ?
+    AND location = ?;
+
 -- name: CreateOffer :exec
-INSERT INTO
-    offers (id, title, company, location, posted_at, query_id)
+INSERT
+OR IGNORE INTO offers (id, title, company, location, posted_at)
 VALUES
-    (?, ?, ?, ?, ?, ?);
+    (?, ?, ?, ?, ?);
 
--- name: ListOffers :many
+-- name: ListOffersFromQuery :many
 SELECT
-    *
+    o.*
 FROM
-    offers
+    queries q
+    JOIN query_offers qo ON q.id = qo.query_id
+    JOIN offers o ON qo.offer_id = o.id
 WHERE
-    query_id = ?
-    AND ignored = 0
-ORDER BY
-    posted_at DESC;
-
--- name: IgnoreOffer :exec
-UPDATE offers
-SET
-    ignored = 1
-WHERE
-    id = ?;
-
--- name: CreateQuery :one
-INSERT INTO
-    queries (keywords, location, f_tpr, f_jt)
-VALUES
-    (?, ?, ?, ?) RETURNING *;
-
--- name: ListQueries :many
-SELECT
-    *
-FROM
-    queries;
+    q.keywords = ?
+    AND q.location = ?;

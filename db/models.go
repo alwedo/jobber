@@ -5,26 +5,27 @@
 package db
 
 import (
-	"database/sql"
 	"time"
 )
 
 type Offer struct {
 	ID        string
-	QueryID   int64
 	Title     string
 	Company   string
 	Location  string
-	Ignored   bool
 	PostedAt  time.Time
-	CreatedAt sql.NullTime
+	CreatedAt time.Time
 }
 
 type Query struct {
 	ID        int64
 	Keywords  string
 	Location  string
-	FTpr      string
-	FJt       string
-	CreatedAt sql.NullTime
+	CreatedAt time.Time
+	QueriedAt time.Time
+}
+
+type QueryOffer struct {
+	QueryID int64
+	OfferID string
 }

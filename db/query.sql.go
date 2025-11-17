@@ -11,10 +11,10 @@ import (
 )
 
 const createOffer = `-- name: CreateOffer :exec
-INSERT INTO
-    offers (id, title, company, location, posted_at, query_id)
+INSERT
+OR IGNORE INTO offers (id, title, company, location, posted_at)
 VALUES
-    (?, ?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?)
 `
 
 type CreateOfferParams struct {
@@ -23,7 +23,6 @@ type CreateOfferParams struct {
 	Company  string
 	Location string
 	PostedAt time.Time
-	QueryID  int64
 }
 
 func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error {
@@ -33,71 +32,74 @@ func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error
 		arg.Company,
 		arg.Location,
 		arg.PostedAt,
-		arg.QueryID,
 	)
 	return err
 }
 
-const createQuery = `-- name: CreateQuery :one
+const createQuery = `-- name: CreateQuery :exec
 INSERT INTO
-    queries (keywords, location, f_tpr, f_jt)
+    queries (keywords, location)
 VALUES
-    (?, ?, ?, ?) RETURNING id, keywords, location, f_tpr, f_jt, created_at
+    (?, ?)
 `
 
 type CreateQueryParams struct {
 	Keywords string
 	Location string
-	FTpr     string
-	FJt      string
 }
 
-func (q *Queries) CreateQuery(ctx context.Context, arg *CreateQueryParams) (*Query, error) {
-	row := q.db.QueryRowContext(ctx, createQuery,
-		arg.Keywords,
-		arg.Location,
-		arg.FTpr,
-		arg.FJt,
-	)
+func (q *Queries) CreateQuery(ctx context.Context, arg *CreateQueryParams) error {
+	_, err := q.db.ExecContext(ctx, createQuery, arg.Keywords, arg.Location)
+	return err
+}
+
+const getQuery = `-- name: GetQuery :one
+SELECT
+    id, keywords, location, created_at, queried_at
+FROM
+    queries
+WHERE
+    keywords = ?
+    AND location = ?
+`
+
+type GetQueryParams struct {
+	Keywords string
+	Location string
+}
+
+func (q *Queries) GetQuery(ctx context.Context, arg *GetQueryParams) (*Query, error) {
+	row := q.db.QueryRowContext(ctx, getQuery, arg.Keywords, arg.Location)
 	var i Query
 	err := row.Scan(
 		&i.ID,
 		&i.Keywords,
 		&i.Location,
-		&i.FTpr,
-		&i.FJt,
 		&i.CreatedAt,
+		&i.QueriedAt,
 	)
 	return &i, err
 }
 
-const ignoreOffer = `-- name: IgnoreOffer :exec
-UPDATE offers
-SET
-    ignored = 1
+const listOffersFromQuery = `-- name: ListOffersFromQuery :many
+SELECT
+    o.id, o.title, o.company, o.location, o.posted_at, o.created_at
+FROM
+    queries q
+    JOIN query_offers qo ON q.id = qo.query_id
+    JOIN offers o ON qo.offer_id = o.id
 WHERE
-    id = ?
+    q.keywords = ?
+    AND q.location = ?
 `
 
-func (q *Queries) IgnoreOffer(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, ignoreOffer, id)
-	return err
+type ListOffersFromQueryParams struct {
+	Keywords string
+	Location string
 }
 
-const listOffers = `-- name: ListOffers :many
-SELECT
-    id, query_id, title, company, location, ignored, posted_at, created_at
-FROM
-    offers
-WHERE
-    query_id = ?
-    AND ignored = 0
-ORDER BY
-    posted_at DESC
-`
-
-func (q *Queries) ListOffers(ctx context.Context, queryID int64) ([]*Offer, error) {
-	rows, err := q.db.QueryContext(ctx, listOffers, queryID)
+func (q *Queries) ListOffersFromQuery(ctx context.Context, arg *ListOffersFromQueryParams) ([]*Offer, error) {
+	rows, err := q.db.QueryContext(ctx, listOffersFromQuery, arg.Keywords, arg.Location)
 	if err != nil {
 		return nil, err
 	}
@@ -107,49 +109,10 @@ func (q *Queries) ListOffers(ctx context.Context, queryID int64) ([]*Offer, erro
 		var i Offer
 		if err := rows.Scan(
 			&i.ID,
-			&i.QueryID,
 			&i.Title,
 			&i.Company,
 			&i.Location,
-			&i.Ignored,
 			&i.PostedAt,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listQueries = `-- name: ListQueries :many
-SELECT
-    id, keywords, location, f_tpr, f_jt, created_at
-FROM
-    queries
-`
-
-func (q *Queries) ListQueries(ctx context.Context) ([]*Query, error) {
-	rows, err := q.db.QueryContext(ctx, listQueries)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*Query
-	for rows.Next() {
-		var i Query
-		if err := rows.Scan(
-			&i.ID,
-			&i.Keywords,
-			&i.Location,
-			&i.FTpr,
-			&i.FJt,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

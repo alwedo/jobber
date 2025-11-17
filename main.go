@@ -22,32 +22,25 @@ func main() {
 	d, closer := initDB()
 	defer closer.Close()
 
-	jb := jobber.New(logger, d)
-
-	query := &db.Query{}
-	queries := jb.ListQueries()
-	if len(queries) == 0 {
-		query = jb.NewQuery(&db.CreateQueryParams{
-			Keywords: "golang",
-			Location: "berlin",
-			FTpr:     jobber.ThreeDaysAgo,
-		})
-	} else {
-		query = queries[0]
+	j := jobber.New(logger, d)
+	offers, err := j.PerformQuery(&db.Query{
+		Keywords: "barista",
+		Location: "potsdam",
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	offers := jb.RunQuery(query)
-	fmt.Printf("We got %d offers.\n\n", len(offers))
-	for _, o := range offers {
-		fmt.Printf("- %s at %s posted on %s\n", o.Title, o.Company, o.PostedAt.Format("2006-01-02"))
-	}
+	o := offers[len(offers)-1]
+	fmt.Println("title: " + o.Title)
+	fmt.Println("location: " + o.Location)
+	fmt.Println("company: " + o.Company)
+	fmt.Println("link(edin): https://www.linkedin.com/jobs/view/" + o.ID)
 }
 
 //go:embed schema.sql
 var ddl string
 
 func initLogger() (*slog.Logger, io.Closer) {
-	// TODO: change file location to home folder
 	out, err := os.OpenFile("jobber.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("unable to open log file: %v", err)
@@ -58,7 +51,6 @@ func initLogger() (*slog.Logger, io.Closer) {
 }
 
 func initDB() (*db.Queries, io.Closer) {
-	// TODO: change file location to home folder
 	d, err := sql.Open("sqlite", "jobber.sqlite")
 	if err != nil {
 		log.Fatalf("unable to open database: %v", err)
