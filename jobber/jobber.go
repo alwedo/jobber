@@ -28,14 +28,15 @@ func New(log *slog.Logger, db *db.Queries) *Jobber {
 }
 
 func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {
-	query, err := j.db.CreateQuery(context.Background(), &db.CreateQueryParams{
+	ctx := context.Background()
+	query, err := j.db.CreateQuery(ctx, &db.CreateQueryParams{
 		Keywords: keywords,
 		Location: location,
 	})
 	var sqliteErr *sqlite.Error
 	if errors.As(err, &sqliteErr) && sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
 		// If the query exist we return the existing query.
-		eq, err := j.db.GetQuery(context.Background(), &db.GetQueryParams{
+		eq, err := j.db.GetQuery(ctx, &db.GetQueryParams{
 			Keywords: keywords,
 			Location: location,
 		})
@@ -47,6 +48,27 @@ func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create query: %w", err)
 	}
+
+	// TODO: perform this assync
+	offers, err := j.linkedIn.search(query)
+	if err != nil {
+		j.logger.Error("unable to perform linkedIn search", slog.String("error", err.Error()))
+	}
+	if offers != nil || len(offers) > 0 {
+		for _, o := range offers {
+			if err := j.db.CreateOffer(ctx, &o); err != nil {
+				j.logger.Error("unable to create offer", slog.String("error", err.Error()))
+				continue
+			}
+			if err := j.db.CreateQueryOfferAssoc(ctx, &db.CreateQueryOfferAssocParams{
+				QueryID: query.ID,
+				OfferID: o.ID,
+			}); err != nil {
+				j.logger.Error("unable to create query offer association", slog.String("error", err.Error()))
+			}
+		}
+	}
+
 	return query, nil
 }
 
