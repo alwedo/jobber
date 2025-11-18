@@ -2,9 +2,9 @@
 <rss version="2.0">
 
 <channel>
-  <title>Jobs for {{.Keywords}} in {{.Location}}</title>
+  <title>{{.Keywords}} jobs in {{.Location}}</title>
   <link>https://websitename.com</link>
-  <description>{{.Keywords}} in {{.Location}}</description>
+  <description>{{.Keywords}} jobs in {{.Location}}</description>
   {{ range .Offers }}
   <item>
     <title>{{title .}}</title>
