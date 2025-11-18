@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"errors"
 	"io"
-	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"testing"
 
@@ -15,105 +14,73 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestFetchOffers(t *testing.T) {
-	mockResp := newMockResp(t)
+func TestCreateQuery(t *testing.T) {
+	d, closer := testDB(t)
+	defer closer()
 	j := &Jobber{
-		client: &http.Client{Transport: mockResp},
+		db:     d,
 		logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
 	}
-	query := &db.Query{
-		Keywords: "golang",
-		Location: "the moon",
-	}
-	resp, err := j.fetchOffers(query, 0)
-	if err != nil {
-		t.Errorf("error fetching offers: %s", err.Error())
-	}
-	defer resp.Close()
-	values := mockResp.req.URL.Query()
-	if values.Get(paramKeywords) != "golang" {
-		t.Errorf("expected 'keywords' in query params to be 'golang', got %s", values.Get(paramKeywords))
-	}
-	if values.Get(paramLocation) != "the moon" {
-		t.Errorf("expected 'location' in query params to be 'the moon', got %s", values.Get(paramLocation))
-	}
-	if values.Get(paramFTPR) != lastWeek {
-		t.Errorf("expected 'f_TPR' in query params to be lastlastWeek, got %s", values.Get(paramFTPR))
-	}
-	if mockResp.req.URL.Host != "www.linkedin.com" {
-		t.Errorf("expected host to be 'www.linkedin.com', got %s", mockResp.req.URL.Host)
-	}
-	if mockResp.req.URL.Path != "/jobs-guest/jobs/api/seeMoreJobPostings/search" {
-		t.Errorf("expected path to be '/jobs-guest/jobs/api/seeMoreJobPostings/search', got %s", mockResp.req.URL.Path)
-	}
-	file, err := os.Open("example1.html")
-	if err != nil {
-		t.Fatalf("failed to open file: %s", err.Error())
-	}
-	defer file.Close()
-	want, err := io.ReadAll(file)
-	if err != nil {
-		t.Fatalf("failed to read example1.html file: %s", err.Error())
-	}
-	got, err := io.ReadAll(resp)
-	if err != nil {
-		t.Errorf("unable to read response body: %v", err)
-	}
-	if len(want) != len(got) {
-		t.Errorf("expected response body length to be %d, got %d", len(want), len(got))
-	}
+
+	t.Run("creates a query", func(t *testing.T) {
+		q, err := j.CreateQuery("cuak", "squeek")
+		if err != nil {
+			t.Fatalf("failed to create query: %s", err)
+		}
+		if q.Keywords != "cuak" {
+			t.Errorf("expected keywords to be 'cuak', got %s", q.Keywords)
+		}
+		if q.Location != "squeek" {
+			t.Errorf("expected location to be 'squeek', got %s", q.Location)
+		}
+	})
+
+	t.Run("on existing query it returns the existing one", func(t *testing.T) {
+		q, err := j.CreateQuery("golang", "Berlin")
+		if err != nil {
+			t.Fatalf("failed to create existing query: %s", err)
+		}
+		if q.ID != 3 {
+			t.Errorf("expected query ID to be 3, got %d", q.ID)
+		}
+		if q.Keywords != "golang" {
+			t.Errorf("expected keywords to be 'golang', got %s", q.Keywords)
+		}
+		if q.Location != "Berlin" {
+			t.Errorf("expected location to be 'Berlin', got %s", q.Location)
+		}
+	})
+
 }
 
-func TestParseLinkedinBody(t *testing.T) {
-	j := &Jobber{logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))}
-
-	file, err := os.Open("example1.html")
-	if err != nil {
-		log.Fatalf("failed to open file: %s", err.Error())
-	}
-	defer file.Close()
-
-	jobs, err := j.parseLinkedinBody(file)
-	if err != nil {
-		t.Fatalf("error parsing example.html: %s", err.Error())
-	}
-	if len(jobs) != 10 {
-		t.Errorf("expected 10 jobs, got %d", len(jobs))
-	}
-	if jobs[0].ID != "4322119156" {
-		t.Errorf("expected job ID 4322119156, got %s", jobs[0].ID)
-	}
-	if jobs[0].Title != "Software Engineer (Golang)" {
-		t.Errorf("expected job title 'Software Engineer (Golang)', got '%s'", jobs[0].Title)
-	}
-	if jobs[0].Location != "Berlin, Berlin, Germany" {
-		t.Errorf("expected job location 'Berlin, Berlin, Germany', got '%s'", jobs[0].Location)
-	}
-	if jobs[0].Company != "Delivery Hero" {
-		t.Errorf("expected job company 'Delivery Hero', got '%s'", jobs[0].Company)
-	}
-	if jobs[0].PostedAt.Format("2006-01-02") != "2025-11-13" {
-		t.Errorf("expected job posted at time %v, got %v", "2025-11-13", jobs[0].PostedAt.Format("2006-01-02"))
-	}
-}
-
-func TestPerformQuery(t *testing.T) {
-	mockResp := newMockResp(t)
+func TestListOffers(t *testing.T) {
+	d, closer := testDB(t)
+	defer closer()
 	j := &Jobber{
-		client: &http.Client{Transport: mockResp},
+		db:     d,
 		logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
 	}
-	query := &db.Query{
-		Keywords: "golang",
-		Location: "the moon",
-	}
-	offers, err := j.PerformQuery(query)
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if len(offers) != 27 {
-		t.Errorf("expected 27 offers, got %d", len(offers))
-	}
+
+	t.Run("returns a list of offers", func(t *testing.T) {
+		o, err := j.ListOffers("golang", "Berlin")
+		if err != nil {
+			t.Fatalf("failed to list offers: %s", err)
+		}
+		if len(o) != 1 {
+			t.Fatalf("expected 1 offer, got %d", len(o))
+		}
+	})
+
+	t.Run("returns sql.ErrNoRows for invalid query", func(t *testing.T) {
+		o, err := j.ListOffers("cuak", "squeek")
+		if !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("expected error to be sql.ErrNoRows, got: %s", err)
+		}
+		if len(o) != 0 {
+			t.Fatalf("expected 0 offers, got %d", len(o))
+		}
+	})
+
 }
 
 func testDB(t testing.TB) (*db.Queries, func() error) {
@@ -150,34 +117,4 @@ INSERT INTO query_offers (query_id, offer_id) VALUES
 		t.Fatalf("failed to seed database: %s", err)
 	}
 	return db.New(d), d.Close
-}
-
-type mockResp struct {
-	t   testing.TB
-	req *http.Request
-}
-
-func (h *mockResp) RoundTrip(req *http.Request) (*http.Response, error) {
-	h.req = req
-	fn := "example1.html"
-	switch h.req.URL.Query().Get("start") {
-	case "10":
-		fn = "example2.html"
-	case "20":
-		fn = "example3.html"
-	}
-
-	body, err := os.Open(fn)
-	if err != nil {
-		h.t.Fatalf("failed to open %s in mockResp.RoundTrip: %s", fn, err)
-	}
-
-	return &http.Response{
-		StatusCode: http.StatusOK,
-		Body:       body,
-	}, nil
-}
-
-func newMockResp(t testing.TB) *mockResp {
-	return &mockResp{t: t}
 }
