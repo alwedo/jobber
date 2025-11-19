@@ -31,18 +31,23 @@ type server struct {
 	jobber *jobber.Jobber
 }
 
-func New(l *slog.Logger, j *jobber.Jobber) http.Handler {
+func New(l *slog.Logger, j *jobber.Jobber) *http.Server {
 	s := &server{logger: l, jobber: j}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /feeds", s.feed())
 	mux.HandleFunc("POST /feeds", s.create())
 	mux.HandleFunc("/", s.index())
 
-	return mux
+	return &http.Server{
+		// TODO: add tls
+		Addr:    ":80",
+		Handler: mux,
+	}
 }
 
 func (s *server) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// TODO: make params mandatory to avoid blank quries
 		k := r.FormValue(queryParamKeywords)
 		l := r.FormValue(queryParamLocation)
 		q, err := s.jobber.CreateQuery(k, l)
