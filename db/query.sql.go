@@ -40,7 +40,7 @@ const createQuery = `-- name: CreateQuery :one
 INSERT INTO
     queries (keywords, location)
 VALUES
-    (?, ?) RETURNING id, keywords, location, created_at, queried_at
+    (?, ?) RETURNING id, keywords, location, created_at, queried_at, updated_at
 `
 
 type CreateQueryParams struct {
@@ -57,13 +57,14 @@ func (q *Queries) CreateQuery(ctx context.Context, arg *CreateQueryParams) (*Que
 		&i.Location,
 		&i.CreatedAt,
 		&i.QueriedAt,
+		&i.UpdatedAt,
 	)
 	return &i, err
 }
 
 const createQueryOfferAssoc = `-- name: CreateQueryOfferAssoc :exec
-INSERT INTO
-    query_offers (query_id, offer_id)
+INSERT
+OR IGNORE INTO query_offers (query_id, offer_id)
 VALUES
     (?, ?)
 `
@@ -78,9 +79,20 @@ func (q *Queries) CreateQueryOfferAssoc(ctx context.Context, arg *CreateQueryOff
 	return err
 }
 
+const deleteQuery = `-- name: DeleteQuery :exec
+DELETE FROM queries
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteQuery(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteQuery, id)
+	return err
+}
+
 const getQuery = `-- name: GetQuery :one
 SELECT
-    id, keywords, location, created_at, queried_at
+    id, keywords, location, created_at, queried_at, updated_at
 FROM
     queries
 WHERE
@@ -102,6 +114,30 @@ func (q *Queries) GetQuery(ctx context.Context, arg *GetQueryParams) (*Query, er
 		&i.Location,
 		&i.CreatedAt,
 		&i.QueriedAt,
+		&i.UpdatedAt,
+	)
+	return &i, err
+}
+
+const getQueryByID = `-- name: GetQueryByID :one
+SELECT
+    id, keywords, location, created_at, queried_at, updated_at
+FROM
+    queries
+WHERE
+    id = ?
+`
+
+func (q *Queries) GetQueryByID(ctx context.Context, id int64) (*Query, error) {
+	row := q.db.QueryRowContext(ctx, getQueryByID, id)
+	var i Query
+	err := row.Scan(
+		&i.ID,
+		&i.Keywords,
+		&i.Location,
+		&i.CreatedAt,
+		&i.QueriedAt,
+		&i.UpdatedAt,
 	)
 	return &i, err
 }
@@ -155,7 +191,37 @@ func (q *Queries) ListOffers(ctx context.Context, arg *ListOffersParams) ([]*Off
 	return items, nil
 }
 
-const updateQueryTS = `-- name: UpdateQueryTS :exec
+const listQueries = `-- name: ListQueries :many
+SELECT
+    id
+FROM
+    queries
+`
+
+func (q *Queries) ListQueries(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, listQueries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateQueryQAT = `-- name: UpdateQueryQAT :exec
 UPDATE queries
 SET
     queried_at = CURRENT_TIMESTAMP
@@ -163,7 +229,20 @@ WHERE
     id = ?
 `
 
-func (q *Queries) UpdateQueryTS(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, updateQueryTS, id)
+func (q *Queries) UpdateQueryQAT(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, updateQueryQAT, id)
+	return err
+}
+
+const updateQueryUAT = `-- name: UpdateQueryUAT :exec
+UPDATE queries
+SET
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?
+`
+
+func (q *Queries) UpdateQueryUAT(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, updateQueryUAT, id)
 	return err
 }

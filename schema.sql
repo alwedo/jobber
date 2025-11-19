@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS queries (
     keywords TEXT NOT NULL,
     location TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    queried_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    queried_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Last time RSS client used the query.
+    updated_at TIMESTAMP, -- Last time the query was executed.
     UNIQUE (keywords, location)
 );
 

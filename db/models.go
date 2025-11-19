@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type Query struct {
 	Location  string
 	CreatedAt time.Time
 	QueriedAt time.Time
+	UpdatedAt sql.NullTime
 }
 
 type QueryOffer struct {

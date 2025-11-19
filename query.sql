@@ -4,6 +4,12 @@ INSERT INTO
 VALUES
     (?, ?) RETURNING *;
 
+-- name: ListQueries :many
+SELECT
+    id
+FROM
+    queries;
+
 -- name: GetQuery :one
 SELECT
     *
@@ -13,10 +19,30 @@ WHERE
     keywords = ?
     AND location = ?;
 
--- name: UpdateQueryTS :exec
+-- name: GetQueryByID :one
+SELECT
+    *
+FROM
+    queries
+WHERE
+    id = ?;
+
+-- name: DeleteQuery :exec
+DELETE FROM queries
+WHERE
+    id = ?;
+
+-- name: UpdateQueryQAT :exec
 UPDATE queries
 SET
     queried_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?;
+
+-- name: UpdateQueryUAT :exec
+UPDATE queries
+SET
+    updated_at = CURRENT_TIMESTAMP
 WHERE
     id = ?;
 
@@ -40,7 +66,7 @@ ORDER BY
     o.posted_at DESC;
 
 -- name: CreateQueryOfferAssoc :exec
-INSERT INTO
-    query_offers (query_id, offer_id)
+INSERT
+OR IGNORE INTO query_offers (query_id, offer_id)
 VALUES
     (?, ?);
