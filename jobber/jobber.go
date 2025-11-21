@@ -11,42 +11,49 @@ import (
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
 	"github.com/go-co-op/gocron/v2"
-	"github.com/google/uuid"
-	"modernc.org/sqlite"
-	sqlite3 "modernc.org/sqlite/lib"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type scraper interface {
+	scrape(*db.Query) ([]db.CreateOfferParams, error)
+}
 
 type Jobber struct {
 	ctx      context.Context
-	linkedIn *linkedIn
+	linkedIn scraper
 	logger   *slog.Logger
 	db       *db.Queries
 	sched    gocron.Scheduler
-	schedMap map[int64]uuid.UUID
 }
 
 func New(log *slog.Logger, db *db.Queries) (*Jobber, func() error) {
-	j := &Jobber{
-		ctx:      context.Background(),
-		linkedIn: NewLinkedIn(log),
-		logger:   log,
-		db:       db,
-		schedMap: make(map[int64]uuid.UUID),
-	}
-	s, err := gocron.NewScheduler()
+	return newConfigurableJobber(log, db, NewLinkedIn(log))
+}
+
+func newConfigurableJobber(log *slog.Logger, db *db.Queries, li scraper) (*Jobber, func() error) {
+	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
 	}
-	j.sched = s
+	j := &Jobber{
+		ctx:      context.Background(),
+		linkedIn: li,
+		logger:   log,
+		db:       db,
+		sched:    sched,
+	}
 
+	// Initial queries scheduling.
 	queries, err := j.db.ListQueries(j.ctx)
 	if err != nil {
 		j.logger.Error("unable to list queries in jobber.scheduleQueries", slog.String("error", err.Error()))
 	}
 	for _, q := range queries {
-		j.scheduleQuery(q)
+		j.scheduleQuery(q, false)
 	}
-	s.Start()
+	j.sched.Start()
 
 	return j, j.sched.Shutdown
 }
@@ -56,8 +63,8 @@ func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {
 		Keywords: keywords,
 		Location: location,
 	})
-	var sqliteErr *sqlite.Error
-	if errors.As(err, &sqliteErr) && sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 		// If the query exist we return the existing query.
 		eq, err := j.db.GetQuery(j.ctx, &db.GetQueryParams{
 			Keywords: keywords,
@@ -79,9 +86,7 @@ func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {
 
 	// After creating a new query we run it so the feed has initial data.
 	// In the frontend we use a spinner with htmx while this is being processed.
-	j.runQuery(query.ID)
-
-	j.scheduleQuery(query)
+	j.scheduleQuery(query, true)
 
 	return query, nil
 }
@@ -102,7 +107,7 @@ func (j *Jobber) ListOffers(keywords, location string) ([]*db.Offer, error) {
 	}
 	return j.db.ListOffers(j.ctx, &db.ListOffersParams{
 		ID:       q.ID,
-		PostedAt: time.Now().AddDate(0, 0, -7), // List offers posted in the last 7 days.
+		PostedAt: pgtype.Timestamptz{Time: time.Now().AddDate(0, 0, -7), Valid: true}, // List offers posted in the last 7 days.
 	})
 }
 
@@ -114,21 +119,18 @@ func (j *Jobber) runQuery(qID int64) {
 	}
 
 	// We remove queries that haven't been used for longer than 7 days.
-	if time.Since(q.QueriedAt) > time.Hour*24*7 {
+	if time.Since(q.QueriedAt.Time) > time.Hour*24*7 {
 		if err := j.db.DeleteQuery(j.ctx, q.ID); err != nil {
 			j.logger.Error("unable to delete query in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 		}
-		if err := j.sched.RemoveJob(j.schedMap[qID]); err != nil {
-			j.logger.Error("unable to remove job from scheduler in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
-		}
-		delete(j.schedMap, qID)
+		j.sched.RemoveByTags(q.Keywords + q.Location)
 
 		j.logger.Info("deleting unused query", slog.Int64("queryID", q.ID), slog.String("keywords", q.Keywords), slog.String("location", q.Location))
 		return
 	}
 
-	// TODO: extend ctx to linkedIn.search
-	offers, err := j.linkedIn.search(q)
+	// TODO: extend ctx to scraper
+	offers, err := j.linkedIn.scrape(q)
 	if err != nil {
 		j.logger.Error("unable to perform linkedIn search in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
@@ -154,16 +156,22 @@ func (j *Jobber) runQuery(qID int64) {
 	j.logger.Info("jobber.runQuery successfully completed query", slog.Int64("queryID", q.ID))
 }
 
-func (j *Jobber) scheduleQuery(q *db.Query) {
-	cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Minute())
+func (j *Jobber) scheduleQuery(q *db.Query, immediately bool) {
+	opts := []gocron.JobOption{gocron.WithTags(q.Keywords + q.Location)}
+	if immediately {
+		opts = append(opts, gocron.WithStartAt(gocron.WithStartImmediately()))
+	}
+
+	cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute())
 	job, err := j.sched.NewJob(
 		gocron.CronJob(cron, false),
 		gocron.NewTask(func(q int64) { j.runQuery(q) }, q.ID),
+		opts...,
 	)
 	if err != nil {
 		j.logger.Error("unable to schedule query in jobber.scheduleQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 		return
 	}
-	j.schedMap[q.ID] = job.ID()
-	j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("jobID", job.ID()))
+
+	j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 }

@@ -7,14 +7,14 @@ package db
 
 import (
 	"context"
-	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createOffer = `-- name: CreateOffer :exec
-INSERT
-OR IGNORE INTO offers (id, title, company, location, posted_at)
-VALUES
-    (?, ?, ?, ?, ?)
+INSERT INTO offers (id, title, company, location, posted_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (id) DO NOTHING
 `
 
 type CreateOfferParams struct {
@@ -22,11 +22,11 @@ type CreateOfferParams struct {
 	Title    string
 	Company  string
 	Location string
-	PostedAt time.Time
+	PostedAt pgtype.Timestamptz
 }
 
 func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error {
-	_, err := q.db.ExecContext(ctx, createOffer,
+	_, err := q.db.Exec(ctx, createOffer,
 		arg.ID,
 		arg.Title,
 		arg.Company,
@@ -40,7 +40,7 @@ const createQuery = `-- name: CreateQuery :one
 INSERT INTO
     queries (keywords, location)
 VALUES
-    (?, ?) RETURNING id, keywords, location, created_at, queried_at, updated_at
+    ($1, $2) RETURNING id, keywords, location, created_at, queried_at, updated_at
 `
 
 type CreateQueryParams struct {
@@ -49,7 +49,7 @@ type CreateQueryParams struct {
 }
 
 func (q *Queries) CreateQuery(ctx context.Context, arg *CreateQueryParams) (*Query, error) {
-	row := q.db.QueryRowContext(ctx, createQuery, arg.Keywords, arg.Location)
+	row := q.db.QueryRow(ctx, createQuery, arg.Keywords, arg.Location)
 	var i Query
 	err := row.Scan(
 		&i.ID,
@@ -63,10 +63,9 @@ func (q *Queries) CreateQuery(ctx context.Context, arg *CreateQueryParams) (*Que
 }
 
 const createQueryOfferAssoc = `-- name: CreateQueryOfferAssoc :exec
-INSERT
-OR IGNORE INTO query_offers (query_id, offer_id)
-VALUES
-    (?, ?)
+INSERT INTO query_offers (query_id, offer_id)
+VALUES ($1, $2)
+ON CONFLICT (query_id, offer_id) DO NOTHING
 `
 
 type CreateQueryOfferAssocParams struct {
@@ -75,18 +74,18 @@ type CreateQueryOfferAssocParams struct {
 }
 
 func (q *Queries) CreateQueryOfferAssoc(ctx context.Context, arg *CreateQueryOfferAssocParams) error {
-	_, err := q.db.ExecContext(ctx, createQueryOfferAssoc, arg.QueryID, arg.OfferID)
+	_, err := q.db.Exec(ctx, createQueryOfferAssoc, arg.QueryID, arg.OfferID)
 	return err
 }
 
 const deleteQuery = `-- name: DeleteQuery :exec
 DELETE FROM queries
 WHERE
-    id = ?
+    id = $1
 `
 
 func (q *Queries) DeleteQuery(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteQuery, id)
+	_, err := q.db.Exec(ctx, deleteQuery, id)
 	return err
 }
 
@@ -96,8 +95,8 @@ SELECT
 FROM
     queries
 WHERE
-    keywords = ?
-    AND location = ?
+    keywords = $1
+    AND location = $2
 `
 
 type GetQueryParams struct {
@@ -106,7 +105,7 @@ type GetQueryParams struct {
 }
 
 func (q *Queries) GetQuery(ctx context.Context, arg *GetQueryParams) (*Query, error) {
-	row := q.db.QueryRowContext(ctx, getQuery, arg.Keywords, arg.Location)
+	row := q.db.QueryRow(ctx, getQuery, arg.Keywords, arg.Location)
 	var i Query
 	err := row.Scan(
 		&i.ID,
@@ -125,11 +124,11 @@ SELECT
 FROM
     queries
 WHERE
-    id = ?
+    id = $1
 `
 
 func (q *Queries) GetQueryByID(ctx context.Context, id int64) (*Query, error) {
-	row := q.db.QueryRowContext(ctx, getQueryByID, id)
+	row := q.db.QueryRow(ctx, getQueryByID, id)
 	var i Query
 	err := row.Scan(
 		&i.ID,
@@ -150,19 +149,19 @@ FROM
     JOIN query_offers qo ON q.id = qo.query_id
     JOIN offers o ON qo.offer_id = o.id
 WHERE
-    q.id = ?
-    AND o.posted_at >= ?
+    q.id = $1
+    AND o.posted_at >= $2
 ORDER BY
     o.posted_at DESC
 `
 
 type ListOffersParams struct {
 	ID       int64
-	PostedAt time.Time
+	PostedAt pgtype.Timestamptz
 }
 
 func (q *Queries) ListOffers(ctx context.Context, arg *ListOffersParams) ([]*Offer, error) {
-	rows, err := q.db.QueryContext(ctx, listOffers, arg.ID, arg.PostedAt)
+	rows, err := q.db.Query(ctx, listOffers, arg.ID, arg.PostedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +181,6 @@ func (q *Queries) ListOffers(ctx context.Context, arg *ListOffersParams) ([]*Off
 		}
 		items = append(items, &i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -199,7 +195,7 @@ FROM
 `
 
 func (q *Queries) ListQueries(ctx context.Context) ([]*Query, error) {
-	rows, err := q.db.QueryContext(ctx, listQueries)
+	rows, err := q.db.Query(ctx, listQueries)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +215,6 @@ func (q *Queries) ListQueries(ctx context.Context) ([]*Query, error) {
 		}
 		items = append(items, &i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -233,11 +226,11 @@ UPDATE queries
 SET
     queried_at = CURRENT_TIMESTAMP
 WHERE
-    id = ?
+    id = $1
 `
 
 func (q *Queries) UpdateQueryQAT(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, updateQueryQAT, id)
+	_, err := q.db.Exec(ctx, updateQueryQAT, id)
 	return err
 }
 
@@ -246,10 +239,10 @@ UPDATE queries
 SET
     updated_at = CURRENT_TIMESTAMP
 WHERE
-    id = ?
+    id = $1
 `
 
 func (q *Queries) UpdateQueryUAT(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, updateQueryUAT, id)
+	_, err := q.db.Exec(ctx, updateQueryUAT, id)
 	return err
 }

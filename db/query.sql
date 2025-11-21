@@ -2,7 +2,7 @@
 INSERT INTO
     queries (keywords, location)
 VALUES
-    (?, ?) RETURNING *;
+    ($1, $2) RETURNING *;
 
 -- name: ListQueries :many
 SELECT
@@ -16,8 +16,8 @@ SELECT
 FROM
     queries
 WHERE
-    keywords = ?
-    AND location = ?;
+    keywords = $1
+    AND location = $2;
 
 -- name: GetQueryByID :one
 SELECT
@@ -25,32 +25,31 @@ SELECT
 FROM
     queries
 WHERE
-    id = ?;
+    id = $1;
 
 -- name: DeleteQuery :exec
 DELETE FROM queries
 WHERE
-    id = ?;
+    id = $1;
 
 -- name: UpdateQueryQAT :exec
 UPDATE queries
 SET
     queried_at = CURRENT_TIMESTAMP
 WHERE
-    id = ?;
+    id = $1;
 
 -- name: UpdateQueryUAT :exec
 UPDATE queries
 SET
     updated_at = CURRENT_TIMESTAMP
 WHERE
-    id = ?;
+    id = $1;
 
 -- name: CreateOffer :exec
-INSERT
-OR IGNORE INTO offers (id, title, company, location, posted_at)
-VALUES
-    (?, ?, ?, ?, ?);
+INSERT INTO offers (id, title, company, location, posted_at)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (id) DO NOTHING;
 
 -- name: ListOffers :many
 SELECT
@@ -60,13 +59,12 @@ FROM
     JOIN query_offers qo ON q.id = qo.query_id
     JOIN offers o ON qo.offer_id = o.id
 WHERE
-    q.id = ?
-    AND o.posted_at >= ?
+    q.id = $1
+    AND o.posted_at >= $2
 ORDER BY
     o.posted_at DESC;
 
 -- name: CreateQueryOfferAssoc :exec
-INSERT
-OR IGNORE INTO query_offers (query_id, offer_id)
-VALUES
-    (?, ?);
+INSERT INTO query_offers (query_id, offer_id)
+VALUES ($1, $2)
+ON CONFLICT (query_id, offer_id) DO NOTHING;

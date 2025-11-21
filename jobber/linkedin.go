@@ -12,6 +12,7 @@ import (
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -46,7 +47,7 @@ func NewLinkedIn(logger *slog.Logger) *linkedIn {
 // search runs a linkedin search based on a query.
 // It will paginate over the search results until it doesn't find any more offers,
 // scrape the data and return a slice of offers ready to be added to the DB.
-func (l *linkedIn) search(query *db.Query) ([]db.CreateOfferParams, error) {
+func (l *linkedIn) scrape(query *db.Query) ([]db.CreateOfferParams, error) {
 	var totalOffers []db.CreateOfferParams
 	var offers []db.CreateOfferParams
 
@@ -139,7 +140,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 			if err != nil {
 				l.logger.Error("unable to parse datetime for job ID ", job.ID, slog.String("error", err.Error()))
 			}
-			job.PostedAt = t
+			job.PostedAt = pgtype.Timestamptz{Time: t, Valid: true}
 
 			// Only add if we have essential data
 			if job.ID != "" && job.Title != "" {

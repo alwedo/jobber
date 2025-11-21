@@ -5,8 +5,7 @@
 package db
 
 import (
-	"database/sql"
-	"time"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Offer struct {
@@ -14,17 +13,17 @@ type Offer struct {
 	Title     string
 	Company   string
 	Location  string
-	PostedAt  time.Time
-	CreatedAt time.Time
+	PostedAt  pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
 }
 
 type Query struct {
 	ID        int64
 	Keywords  string
 	Location  string
-	CreatedAt time.Time
-	QueriedAt time.Time
-	UpdatedAt sql.NullTime
+	CreatedAt pgtype.Timestamptz
+	QueriedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
 }
 
 type QueryOffer struct {
