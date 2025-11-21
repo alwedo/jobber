@@ -37,7 +37,7 @@ type linkedIn struct {
 	logger *slog.Logger
 }
 
-func NewLinkedIn(logger *slog.Logger) *linkedIn {
+func NewLinkedIn(logger *slog.Logger) *linkedIn { //nolint: revive
 	return &linkedIn{
 		client: &http.Client{Timeout: 10 * time.Second},
 		logger: logger,
@@ -83,7 +83,7 @@ func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, e
 		// UpdatedAt is updated every time we run the query against LinkedIn.
 		// If the query has a valid UpdateAt field we don't use a week for
 		// the FTPR value but the time difference between the last query and now.
-		ftpr = fmt.Sprintf("r%d", int(time.Now().Sub(query.UpdatedAt.Time).Seconds()))
+		ftpr = fmt.Sprintf("r%d", int(time.Since(query.UpdatedAt.Time).Seconds()))
 	}
 	qp.Add(paramFTPR, ftpr)
 

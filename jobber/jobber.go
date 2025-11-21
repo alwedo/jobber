@@ -28,11 +28,11 @@ type Jobber struct {
 	sched    gocron.Scheduler
 }
 
-func New(log *slog.Logger, db *db.Queries) (*Jobber, func() error) {
+func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
 	return newConfigurableJobber(log, db, NewLinkedIn(log))
 }
 
-func newConfigurableJobber(log *slog.Logger, db *db.Queries, li scraper) (*Jobber, func() error) {
+func newConfigurableJobber(log *slog.Logger, db *db.Queries, li scraper) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
@@ -55,7 +55,11 @@ func newConfigurableJobber(log *slog.Logger, db *db.Queries, li scraper) (*Jobbe
 	}
 	j.sched.Start()
 
-	return j, j.sched.Shutdown
+	return j, func() {
+		if err := j.sched.Shutdown(); err != nil {
+			j.logger.Error("failed to shutdown scheduler", slog.String("error", err.Error()))
+		}
+	}
 }
 
 func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {

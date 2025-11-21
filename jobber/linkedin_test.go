@@ -80,7 +80,6 @@ func TestFetchOffersPage(t *testing.T) {
 			t.Errorf("expected FT_PR to be 'r3600', got %s", gotFTPR)
 		}
 	})
-
 }
 
 func TestParseLinkedInBody(t *testing.T) {

@@ -49,7 +49,7 @@ func TestCreateQuery(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		for _, jb := range j.sched.Jobs() {
 			if slices.Contains(jb.Tags(), q.Keywords+q.Location) {
-				lr, _ := jb.LastRun()
+				lr, _ := jb.LastRun() //nolint: errcheck
 				if lr.Before(time.Now().Add(-time.Second)) {
 					t.Errorf("expected created query to have been performed immediately, got %v", lr)
 				}

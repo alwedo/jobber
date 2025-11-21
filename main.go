@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -26,7 +25,7 @@ func main() {
 	)
 
 	logger, logCloser := initLogger()
-	defer logCloser.Close()
+	defer logCloser()
 
 	d, dbCloser := initDB(ctx)
 	defer dbCloser()
@@ -35,7 +34,11 @@ func main() {
 	defer jCloser()
 
 	svr := server.New(logger, j)
-	defer svr.Shutdown(ctx)
+	defer func() {
+		if err := svr.Shutdown(ctx); err != nil {
+			logger.Error("unable to shutdown server", slog.String("error", err.Error()))
+		}
+	}()
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
@@ -59,14 +62,18 @@ func main() {
 	}
 }
 
-func initLogger() (*slog.Logger, io.Closer) {
+func initLogger() (*slog.Logger, func()) {
 	out, err := os.OpenFile("jobber.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("unable to open log file: %v", err)
 	}
 
 	handler := slog.NewJSONHandler(out, &slog.HandlerOptions{Level: slog.LevelDebug})
-	return slog.New(handler), out
+	return slog.New(handler), func() {
+		if err := out.Close(); err != nil {
+			log.Printf("unable to close log file: %v", err)
+		}
+	}
 }
 
 func initDB(ctx context.Context) (*db.Queries, func()) {

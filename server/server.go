@@ -40,8 +40,9 @@ func New(l *slog.Logger, j *jobber.Jobber) *http.Server {
 
 	return &http.Server{
 		// TODO: add tls
-		Addr:    ":80",
-		Handler: mux,
+		Addr:              ":80",
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 }
 
@@ -57,13 +58,17 @@ func (s *server) create() http.HandlerFunc {
 			return
 		}
 
+		// TODO: do this with url.Encode
 		url := fmt.Sprintf("https://%s/feeds?keywords=%s&location=%s", r.Host, q.Keywords, q.Location)
-		w.Write([]byte(html.EscapeString(url)))
+		_, err = w.Write([]byte(html.EscapeString(url)))
+		if err != nil {
+			s.logger.Error("failed to write response", slog.String("url", url), slog.String("error", err.Error()))
+		}
 	}
 }
 
 func (s *server) index() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, indexHTML)
 	}
 }
@@ -117,6 +122,5 @@ func (s *server) feed() http.HandlerFunc {
 			http.Error(w, "failed to execute template", http.StatusInternalServerError)
 			return
 		}
-
 	}
 }
