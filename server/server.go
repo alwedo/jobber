@@ -97,7 +97,7 @@ func (s *server) feed() http.HandlerFunc {
 				return o.CreatedAt.Format(time.RFC1123Z)
 			},
 			"title": func(o *db.Offer) string {
-				t := fmt.Sprintf("%s at %s in %s (posted %s)", o.Title, o.Company, o.Location, o.PostedAt.Format("Jan 2"))
+				t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Format("Jan 2"))
 				return html.EscapeString(t)
 			},
 		}
