@@ -94,10 +94,10 @@ func (s *server) feed() http.HandlerFunc {
 		w.Header().Add("Content-Type", "application/rss+xml")
 		funcMap := template.FuncMap{
 			"createdAt": func(o *db.Offer) string {
-				return o.CreatedAt.Format(time.RFC1123Z)
+				return o.CreatedAt.Time.Format(time.RFC1123Z)
 			},
 			"title": func(o *db.Offer) string {
-				t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Format("Jan 2"))
+				t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Time.Format("Jan 2"))
 				return html.EscapeString(t)
 			},
 		}
