@@ -12,6 +12,7 @@ import (
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -139,7 +140,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 			if err != nil {
 				l.logger.Error("unable to parse datetime for job ID ", job.ID, slog.String("error", err.Error()))
 			}
-			job.PostedAt = t
+			job.PostedAt = pgtype.Timestamptz{Time: t, Valid: true}
 
 			// Only add if we have essential data
 			if job.ID != "" && job.Title != "" {

@@ -1,7 +1,6 @@
 package jobber
 
 import (
-	"database/sql"
 	"io"
 	"log"
 	"log/slog"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestFetchOffersPage(t *testing.T) {
@@ -68,7 +68,7 @@ func TestFetchOffersPage(t *testing.T) {
 		query := &db.Query{
 			Keywords:  "golang",
 			Location:  "the moon",
-			UpdatedAt: sql.NullTime{Valid: true, Time: time.Now().Add(-time.Hour)},
+			UpdatedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().Add(-time.Hour)},
 		}
 		resp, err := l.fetchOffersPage(query, 0)
 		if err != nil {
@@ -111,8 +111,8 @@ func TestParseLinkedInBody(t *testing.T) {
 	if jobs[0].Company != "Delivery Hero" {
 		t.Errorf("expected job company 'Delivery Hero', got '%s'", jobs[0].Company)
 	}
-	if jobs[0].PostedAt.Format("2006-01-02") != "2025-11-13" {
-		t.Errorf("expected job posted at time %v, got %v", "2025-11-13", jobs[0].PostedAt.Format("2006-01-02"))
+	if jobs[0].PostedAt.Time.Format("2006-01-02") != "2025-11-13" {
+		t.Errorf("expected job posted at time %v, got %v", "2025-11-13", jobs[0].PostedAt.Time.Format("2006-01-02"))
 	}
 }
 
