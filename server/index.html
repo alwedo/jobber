@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>jobber</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+      .centered-form {
+        display: block;
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      .htmx-indicator {
+        opacity: 0;
+        visibility: hidden;
+      }
+      .htmx-request .htmx-indicator,
+      .htmx-request.htmx-indicator {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 200ms ease-in;
+      }
+
+      #content.htmx-indicator {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 200ms ease-in;
+      }
+      #content.htmx-request #content.htmx-indicator,
+      #content.htmx-request.htmx-indicator {
+        opacity: 0;
+        visibility: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="centered-form">
+      <p>Bring them jobs to me!</p>
+
+      <div id="content" class="spinner htmx-indicator">
+        <form
+          style="display: inline"
+          hx-post="/feeds"
+          hx-indicator=".spinner"
+          hx-target="#content"
+          hx-swap="innerHTML"
+        >
+          <input type="text" name="keywords" placeholder="Keywords" required />
+          <input type="text" name="location" placeholder="Location" />
+          <button type="submit">Create RSS Feed</button>
+        </form>
+      </div>
+      <p class="spinner htmx-indicator">Loading...</p>
+    </div>
+
+    <footer>
+      <br />
+      <p style="text-align: center">- jobber -</p>
+    </footer>
+  </body>
+</html>

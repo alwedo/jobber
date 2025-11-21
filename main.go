@@ -4,42 +4,59 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"fmt"
+	"errors"
 	"io"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
 	"github.com/Alvaroalonsobabbel/jobber/jobber"
+	"github.com/Alvaroalonsobabbel/jobber/server"
 	_ "modernc.org/sqlite"
 )
 
 func main() {
-	logger, closer := initLogger()
-	defer closer.Close()
+	var (
+		ctx    = context.Background()
+		svrErr = make(chan error, 1)
+		c      = make(chan os.Signal, 1)
+	)
 
-	d, closer := initDB()
-	defer closer.Close()
+	logger, logCloser := initLogger()
+	defer logCloser.Close()
 
-	jb := jobber.New(logger, d)
+	d, dbCloser := initDB(ctx)
+	defer dbCloser.Close()
 
-	query := &db.Query{}
-	queries := jb.ListQueries()
-	if len(queries) == 0 {
-		query = jb.NewQuery(&db.CreateQueryParams{
-			Keywords: "golang",
-			Location: "berlin",
-			FTpr:     jobber.ThreeDaysAgo,
-		})
-	} else {
-		query = queries[0]
-	}
+	j, jCloser := jobber.New(logger, d)
+	defer jCloser()
 
-	offers := jb.RunQuery(query)
-	fmt.Printf("We got %d offers.\n\n", len(offers))
-	for _, o := range offers {
-		fmt.Printf("- %s at %s posted on %s\n", o.Title, o.Company, o.PostedAt.Format("2006-01-02"))
+	svr := server.New(logger, j)
+	defer svr.Shutdown(ctx)
+
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		log.Println("starting server in port " + svr.Addr)
+		if err := svr.ListenAndServe(); err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				log.Println(err)
+			} else {
+				log.Println(err)
+				svrErr <- err
+			}
+		}
+	}()
+
+	select {
+	case <-svrErr:
+		log.Println("\nserver error, shutting down...")
+	case <-c:
+		log.Println("\nshutting down...")
 	}
 }
 
@@ -47,7 +64,6 @@ func main() {
 var ddl string
 
 func initLogger() (*slog.Logger, io.Closer) {
-	// TODO: change file location to home folder
 	out, err := os.OpenFile("jobber.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("unable to open log file: %v", err)
@@ -57,13 +73,18 @@ func initLogger() (*slog.Logger, io.Closer) {
 	return slog.New(handler), out
 }
 
-func initDB() (*db.Queries, io.Closer) {
-	// TODO: change file location to home folder
+func initDB(ctx context.Context) (*db.Queries, io.Closer) {
 	d, err := sql.Open("sqlite", "jobber.sqlite")
 	if err != nil {
 		log.Fatalf("unable to open database: %v", err)
 	}
-	if _, err := d.ExecContext(context.Background(), ddl); err != nil {
+	if _, err := d.ExecContext(ctx, "PRAGMA journal_mode = WAL"); err != nil {
+		log.Fatalf("unable to set WAL mode: %v", err)
+	}
+	if _, err := d.ExecContext(ctx, "PRAGMA busy_timeout = 30000"); err != nil {
+		log.Fatalf("unable to set busy timeout: %v", err)
+	}
+	if _, err := d.ExecContext(ctx, ddl); err != nil {
 		log.Fatalf("unable to create database: %v", err)
 	}
 	return db.New(d), d

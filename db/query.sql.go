@@ -11,10 +11,10 @@ import (
 )
 
 const createOffer = `-- name: CreateOffer :exec
-INSERT INTO
-    offers (id, title, company, location, posted_at, query_id)
+INSERT
+OR IGNORE INTO offers (id, title, company, location, posted_at)
 VALUES
-    (?, ?, ?, ?, ?, ?)
+    (?, ?, ?, ?, ?)
 `
 
 type CreateOfferParams struct {
@@ -23,7 +23,6 @@ type CreateOfferParams struct {
 	Company  string
 	Location string
 	PostedAt time.Time
-	QueryID  int64
 }
 
 func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error {
@@ -33,71 +32,137 @@ func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error
 		arg.Company,
 		arg.Location,
 		arg.PostedAt,
-		arg.QueryID,
 	)
 	return err
 }
 
 const createQuery = `-- name: CreateQuery :one
 INSERT INTO
-    queries (keywords, location, f_tpr, f_jt)
+    queries (keywords, location)
 VALUES
-    (?, ?, ?, ?) RETURNING id, keywords, location, f_tpr, f_jt, created_at
+    (?, ?) RETURNING id, keywords, location, created_at, queried_at, updated_at
 `
 
 type CreateQueryParams struct {
 	Keywords string
 	Location string
-	FTpr     string
-	FJt      string
 }
 
 func (q *Queries) CreateQuery(ctx context.Context, arg *CreateQueryParams) (*Query, error) {
-	row := q.db.QueryRowContext(ctx, createQuery,
-		arg.Keywords,
-		arg.Location,
-		arg.FTpr,
-		arg.FJt,
-	)
+	row := q.db.QueryRowContext(ctx, createQuery, arg.Keywords, arg.Location)
 	var i Query
 	err := row.Scan(
 		&i.ID,
 		&i.Keywords,
 		&i.Location,
-		&i.FTpr,
-		&i.FJt,
 		&i.CreatedAt,
+		&i.QueriedAt,
+		&i.UpdatedAt,
 	)
 	return &i, err
 }
 
-const ignoreOffer = `-- name: IgnoreOffer :exec
-UPDATE offers
-SET
-    ignored = 1
+const createQueryOfferAssoc = `-- name: CreateQueryOfferAssoc :exec
+INSERT
+OR IGNORE INTO query_offers (query_id, offer_id)
+VALUES
+    (?, ?)
+`
+
+type CreateQueryOfferAssocParams struct {
+	QueryID int64
+	OfferID string
+}
+
+func (q *Queries) CreateQueryOfferAssoc(ctx context.Context, arg *CreateQueryOfferAssocParams) error {
+	_, err := q.db.ExecContext(ctx, createQueryOfferAssoc, arg.QueryID, arg.OfferID)
+	return err
+}
+
+const deleteQuery = `-- name: DeleteQuery :exec
+DELETE FROM queries
 WHERE
     id = ?
 `
 
-func (q *Queries) IgnoreOffer(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, ignoreOffer, id)
+func (q *Queries) DeleteQuery(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteQuery, id)
 	return err
+}
+
+const getQuery = `-- name: GetQuery :one
+SELECT
+    id, keywords, location, created_at, queried_at, updated_at
+FROM
+    queries
+WHERE
+    keywords = ?
+    AND location = ?
+`
+
+type GetQueryParams struct {
+	Keywords string
+	Location string
+}
+
+func (q *Queries) GetQuery(ctx context.Context, arg *GetQueryParams) (*Query, error) {
+	row := q.db.QueryRowContext(ctx, getQuery, arg.Keywords, arg.Location)
+	var i Query
+	err := row.Scan(
+		&i.ID,
+		&i.Keywords,
+		&i.Location,
+		&i.CreatedAt,
+		&i.QueriedAt,
+		&i.UpdatedAt,
+	)
+	return &i, err
+}
+
+const getQueryByID = `-- name: GetQueryByID :one
+SELECT
+    id, keywords, location, created_at, queried_at, updated_at
+FROM
+    queries
+WHERE
+    id = ?
+`
+
+func (q *Queries) GetQueryByID(ctx context.Context, id int64) (*Query, error) {
+	row := q.db.QueryRowContext(ctx, getQueryByID, id)
+	var i Query
+	err := row.Scan(
+		&i.ID,
+		&i.Keywords,
+		&i.Location,
+		&i.CreatedAt,
+		&i.QueriedAt,
+		&i.UpdatedAt,
+	)
+	return &i, err
 }
 
 const listOffers = `-- name: ListOffers :many
 SELECT
-    id, query_id, title, company, location, ignored, posted_at, created_at
+    o.id, o.title, o.company, o.location, o.posted_at, o.created_at
 FROM
-    offers
+    queries q
+    JOIN query_offers qo ON q.id = qo.query_id
+    JOIN offers o ON qo.offer_id = o.id
 WHERE
-    query_id = ?
-    AND ignored = 0
+    q.id = ?
+    AND o.posted_at >= ?
 ORDER BY
-    posted_at DESC
+    o.posted_at DESC
 `
 
-func (q *Queries) ListOffers(ctx context.Context, queryID int64) ([]*Offer, error) {
-	rows, err := q.db.QueryContext(ctx, listOffers, queryID)
+type ListOffersParams struct {
+	ID       int64
+	PostedAt time.Time
+}
+
+func (q *Queries) ListOffers(ctx context.Context, arg *ListOffersParams) ([]*Offer, error) {
+	rows, err := q.db.QueryContext(ctx, listOffers, arg.ID, arg.PostedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -107,11 +172,9 @@ func (q *Queries) ListOffers(ctx context.Context, queryID int64) ([]*Offer, erro
 		var i Offer
 		if err := rows.Scan(
 			&i.ID,
-			&i.QueryID,
 			&i.Title,
 			&i.Company,
 			&i.Location,
-			&i.Ignored,
 			&i.PostedAt,
 			&i.CreatedAt,
 		); err != nil {
@@ -130,7 +193,7 @@ func (q *Queries) ListOffers(ctx context.Context, queryID int64) ([]*Offer, erro
 
 const listQueries = `-- name: ListQueries :many
 SELECT
-    id, keywords, location, f_tpr, f_jt, created_at
+    id, keywords, location, created_at, queried_at, updated_at
 FROM
     queries
 `
@@ -148,9 +211,9 @@ func (q *Queries) ListQueries(ctx context.Context) ([]*Query, error) {
 			&i.ID,
 			&i.Keywords,
 			&i.Location,
-			&i.FTpr,
-			&i.FJt,
 			&i.CreatedAt,
+			&i.QueriedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -163,4 +226,30 @@ func (q *Queries) ListQueries(ctx context.Context) ([]*Query, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateQueryQAT = `-- name: UpdateQueryQAT :exec
+UPDATE queries
+SET
+    queried_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?
+`
+
+func (q *Queries) UpdateQueryQAT(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, updateQueryQAT, id)
+	return err
+}
+
+const updateQueryUAT = `-- name: UpdateQueryUAT :exec
+UPDATE queries
+SET
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?
+`
+
+func (q *Queries) UpdateQueryUAT(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, updateQueryUAT, id)
+	return err
 }

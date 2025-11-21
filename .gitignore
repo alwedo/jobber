@@ -1,5 +1,3 @@
-jobber.sqlite
-jobber.sqlite-journal
+.DS_Store
+jobber.sqlite*
 jobber.log
-.jobber.log
-debug.log
