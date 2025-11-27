@@ -4,6 +4,7 @@ go 1.25.4
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.3
+	github.com/approvals/go-approval-tests v1.6.2
 	github.com/docker/go-connections v0.6.0
 	github.com/go-co-op/gocron/v2 v2.18.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6

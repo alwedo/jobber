@@ -33,10 +33,14 @@ func main() {
 	j, jCloser := jobber.New(logger, d)
 	defer jCloser()
 
-	svr := server.New(logger, j)
+	svr, err := server.New(logger, j)
+	if err != nil {
+		log.Println("unable to create server: " + err.Error())
+		return
+	}
 	defer func() {
 		if err := svr.Shutdown(ctx); err != nil {
-			logger.Error("unable to shutdown server", slog.String("error", err.Error()))
+			log.Println("unable to shutdown server: " + err.Error())
 		}
 	}()
 
