@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+
+<channel>
+  <title>query not found :(</title>
+  <link>https://websitename.com</link>
+  <description>No query has been found for fluffy dogs jobs in the moon</description>
+
+  <item>
+    <title>No query has been found for fluffy dogs jobs in the moon</title>
+    <description>Try searching for a query here or creating a new query here</description>
+    <link>https://websitename.com</link>
+    <pubDate>DATETIME_SCRUBBED</pubDate>
+    <guid isPermaLink="false">1</guid>
+  </item></channel>
+</rss>

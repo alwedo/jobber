@@ -11,3 +11,25 @@ services:
         volumes:
             - ./postgres-data:/var/lib/postgresql
         restart: unless-stopped
+        networks:
+            - jobber-network
+
+    jobber:
+        build: .
+        container_name: jobber
+        environment:
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            DB_HOST: postgres
+        ports:
+            - "80:80"
+        volumes:
+            - ./jobber.log:/jobber.log
+        depends_on:
+            - postgres
+        restart: unless-stopped
+        networks:
+            - jobber-network
+
+networks:
+    jobber-network:
+        driver: bridge

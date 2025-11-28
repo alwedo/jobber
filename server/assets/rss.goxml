@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+
+<channel>{{ if .NotFound }}
+  <title>query not found :(</title>
+  <link>https://websitename.com</link>
+  <description>No query has been found for {{.Keywords}} jobs in {{.Location}}</description>
+
+  <item>
+    <title>No query has been found for {{.Keywords}} jobs in {{.Location}}</title>
+    <description>Try searching for a query here or creating a new query here</description>
+    <link>https://websitename.com</link>
+    <pubDate>{{now}}</pubDate>
+    <guid isPermaLink="false">1</guid>
+  </item>{{ else }}
+  <title>{{.Keywords}} jobs in {{.Location}}</title>
+  <link>https://websitename.com</link>
+  <description>{{.Keywords}} jobs in {{.Location}}</description>
+  {{ range .Offers }}
+  <item>
+    <title>{{title .}}</title>
+    <link>https://www.linkedin.com/jobs/view/{{.ID}}</link>
+    <pubDate>{{createdAt .}}</pubDate>
+    <guid isPermaLink="false">{{.ID}}</guid>
+  </item>
+  {{ end }}
+{{ end }}</channel>
+</rss>

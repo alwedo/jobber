@@ -4,12 +4,14 @@ go 1.25.4
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.3
+	github.com/approvals/go-approval-tests v1.6.2
 	github.com/docker/go-connections v0.6.0
 	github.com/go-co-op/gocron/v2 v2.18.0
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20251119195548-4e0068c0098b
 )
 
 require (

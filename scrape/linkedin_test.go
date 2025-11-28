@@ -1,6 +1,7 @@
-package jobber
+package scrape
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -37,7 +38,7 @@ func TestFetchOffersPage(t *testing.T) {
 		if values.Get(paramLocation) != "the moon" {
 			t.Errorf("expected 'location' in query params to be 'the moon', got %s", values.Get(paramLocation))
 		}
-		if values.Get(paramFTPR) != lastWeek {
+		if values.Get(paramFTPR) != fmt.Sprintf("r%d", oneWeekInSeconds) {
 			t.Errorf("expected 'f_TPR' in query params to be lastlastWeek, got %s", values.Get(paramFTPR))
 		}
 		if mockResp.req.URL.Host != "www.linkedin.com" {
@@ -46,9 +47,9 @@ func TestFetchOffersPage(t *testing.T) {
 		if mockResp.req.URL.Path != "/jobs-guest/jobs/api/seeMoreJobPostings/search" {
 			t.Errorf("expected path to be '/jobs-guest/jobs/api/seeMoreJobPostings/search', got %s", mockResp.req.URL.Path)
 		}
-		file, err := os.Open("example1.html")
+		file, err := os.Open("test_data/linkedin1.html")
 		if err != nil {
-			t.Fatalf("failed to open file: %s", err.Error())
+			t.Fatalf("failed to open file test_data/linkedin1.html: %s", err.Error())
 		}
 		defer file.Close()
 		want, err := io.ReadAll(file)
@@ -85,7 +86,7 @@ func TestFetchOffersPage(t *testing.T) {
 func TestParseLinkedInBody(t *testing.T) {
 	l := &linkedIn{logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))}
 
-	file, err := os.Open("example1.html")
+	file, err := os.Open("test_data/linkedin1.html")
 	if err != nil {
 		log.Fatalf("failed to open file: %s", err.Error())
 	}
@@ -93,7 +94,7 @@ func TestParseLinkedInBody(t *testing.T) {
 
 	jobs, err := l.parseLinkedInBody(file)
 	if err != nil {
-		t.Fatalf("error parsing example.html: %s", err.Error())
+		t.Fatalf("error parsing test_data/linkedin1.html: %s", err.Error())
 	}
 	if len(jobs) != 10 {
 		t.Errorf("expected 10 jobs, got %d", len(jobs))
@@ -125,7 +126,7 @@ func TestSearch(t *testing.T) {
 		Keywords: "golang",
 		Location: "the moon",
 	}
-	offers, err := l.scrape(query)
+	offers, err := l.Scrape(query)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -141,12 +142,12 @@ type linkedInMockResp struct {
 
 func (h *linkedInMockResp) RoundTrip(req *http.Request) (*http.Response, error) {
 	h.req = req
-	fn := "example1.html"
+	fn := "test_data/linkedin1.html"
 	switch h.req.URL.Query().Get("start") {
 	case "10":
-		fn = "example2.html"
+		fn = "test_data/linkedin2.html"
 	case "20":
-		fn = "example3.html"
+		fn = "test_data/linkedin3.html"
 	}
 
 	body, err := os.Open(fn)

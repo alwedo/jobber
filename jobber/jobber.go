@@ -1,5 +1,8 @@
-// Package jobber retrieves job offers from linedin based on query
-// parameters and store the queries and the job offers on the database.
+// Package jobber orchestrates scheduled scraping of job offers from external sources based on
+// user-defined search queries. It manages query lifecycle (creation, scheduling, expiration),
+// persists results to a database, and automatically prunes stale queries after 7 days of inactivity.
+// Each query runs on an hourly cron schedule, deduplicates offers, and maintains query-offer
+// associations for efficient retrieval.
 package jobber
 
 import (
@@ -10,39 +13,36 @@ import (
 	"time"
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
+	"github.com/Alvaroalonsobabbel/jobber/scrape"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type scraper interface {
-	scrape(*db.Query) ([]db.CreateOfferParams, error)
-}
-
 type Jobber struct {
-	ctx      context.Context
-	linkedIn scraper
-	logger   *slog.Logger
-	db       *db.Queries
-	sched    gocron.Scheduler
+	ctx    context.Context
+	scpr   scrape.Scraper
+	logger *slog.Logger
+	db     *db.Queries
+	sched  gocron.Scheduler
 }
 
 func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
-	return newConfigurableJobber(log, db, NewLinkedIn(log))
+	return NewConfigurableJobber(log, db, scrape.LinkedIn(log))
 }
 
-func newConfigurableJobber(log *slog.Logger, db *db.Queries, li scraper) (*Jobber, func()) {
+func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
 	}
 	j := &Jobber{
-		ctx:      context.Background(),
-		linkedIn: li,
-		logger:   log,
-		db:       db,
-		sched:    sched,
+		ctx:    context.Background(),
+		scpr:   s,
+		logger: log,
+		db:     db,
+		sched:  sched,
 	}
 
 	// Initial queries scheduling.
@@ -62,25 +62,20 @@ func newConfigurableJobber(log *slog.Logger, db *db.Queries, li scraper) (*Jobbe
 	}
 }
 
-func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {
+// CreateQuery creates a new query and schedules it.
+// If the query already exists the creation will be ignored.
+func (j *Jobber) CreateQuery(keywords, location string) error {
 	query, err := j.db.CreateQuery(j.ctx, &db.CreateQueryParams{
 		Keywords: keywords,
 		Location: location,
 	})
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-		// If the query exist we return the existing query.
-		eq, err := j.db.GetQuery(j.ctx, &db.GetQueryParams{
-			Keywords: keywords,
-			Location: location,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to get query: %w", err)
-		}
-		return eq, nil
+		// If the query exist we return no error.
+		return nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to create query: %w", err)
+		return fmt.Errorf("failed to create query: %w", err)
 	}
 	j.logger.Info("created new query",
 		slog.Int64("queryID", query.ID),
@@ -88,11 +83,12 @@ func (j *Jobber) CreateQuery(keywords, location string) (*db.Query, error) {
 		slog.String("location", location),
 	)
 
-	// After creating a new query we run it so the feed has initial data.
-	// In the frontend we use a spinner with htmx while this is being processed.
+	// After creating a new query we schedule it and run it immediately
+	// so the feed has initial data. In the frontend we use a spinner
+	// with htmx while this is being processed.
 	j.scheduleQuery(query, true)
 
-	return query, nil
+	return nil
 }
 
 // ListOffers return the list of offers posted in the last 7 days for a
@@ -134,7 +130,7 @@ func (j *Jobber) runQuery(qID int64) {
 	}
 
 	// TODO: extend ctx to scraper
-	offers, err := j.linkedIn.scrape(q)
+	offers, err := j.scpr.Scrape(q)
 	if err != nil {
 		j.logger.Error("unable to perform linkedIn search in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
@@ -157,7 +153,7 @@ func (j *Jobber) runQuery(qID int64) {
 		j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
 
-	j.logger.Info("jobber.runQuery successfully completed query", slog.Int64("queryID", q.ID))
+	j.logger.Info("successfuly completed jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("keywords", q.Keywords), slog.String("location", q.Location))
 }
 
 func (j *Jobber) scheduleQuery(q *db.Query, immediately bool) {

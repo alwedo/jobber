@@ -15,6 +15,7 @@ import (
 	"github.com/Alvaroalonsobabbel/jobber/jobber"
 	"github.com/Alvaroalonsobabbel/jobber/server"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "golang.org/x/crypto/x509roots/fallback" // CA bundle for FROM Scratch
 )
 
 func main() {
@@ -33,10 +34,14 @@ func main() {
 	j, jCloser := jobber.New(logger, d)
 	defer jCloser()
 
-	svr := server.New(logger, j)
+	svr, err := server.New(logger, j)
+	if err != nil {
+		log.Println("unable to create server: " + err.Error())
+		return
+	}
 	defer func() {
 		if err := svr.Shutdown(ctx); err != nil {
-			logger.Error("unable to shutdown server", slog.String("error", err.Error()))
+			log.Println("unable to shutdown server: " + err.Error())
 		}
 	}()
 
@@ -77,7 +82,11 @@ func initLogger() (*slog.Logger, func()) {
 }
 
 func initDB(ctx context.Context) (*db.Queries, func()) {
-	connStr := fmt.Sprintf("host=localhost user=jobber password=%s dbname=jobber sslmode=disable", os.Getenv("POSTGRES_PASSWORD"))
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	connStr := fmt.Sprintf("host=%s user=jobber password=%s dbname=jobber sslmode=disable", host, os.Getenv("POSTGRES_PASSWORD"))
 	conn, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		log.Fatalf("unable to initialized db connection: %v", err)

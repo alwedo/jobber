@@ -1,4 +1,4 @@
-package jobber
+package scrape
 
 import (
 	"fmt"
@@ -16,20 +16,13 @@ import (
 )
 
 const (
-	paramKeywords = "keywords" // Search keywords, ie. "golang"
-	paramLocation = "location" // Location of the search, ie. "Berlin"
-	paramStart    = "start"    // Start of the pagination, in intervals of 10s, ie. "10"
-
-	/*	Time Posted Range, ie.
-		- r86400` = Past 24 hours
-		- `r604800` = Past week
-		- `r2592000` = Past month
-		- `rALL` = Any time
-	*/
-	paramFTPR      = "f_TPR"
-	lastWeek       = "r604800" // Past week
-	searchInterval = 10        // LinkedIn pagination interval
-	linkedInURL    = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+	linkedInURL      = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+	paramKeywords    = "keywords" // Search keywords, ie. "golang"
+	paramLocation    = "location" // Location of the search, ie. "Berlin"
+	paramStart       = "start"    // Start of the pagination, in intervals of 10s, ie. "10"
+	paramFTPR        = "f_TPR"    // Time Posted Range. Values are in seconds, starting with 'r', ie. r86400 = Past 24 hours
+	searchInterval   = 10         // LinkedIn pagination interval
+	oneWeekInSeconds = 604800
 )
 
 type linkedIn struct {
@@ -37,7 +30,7 @@ type linkedIn struct {
 	logger *slog.Logger
 }
 
-func NewLinkedIn(logger *slog.Logger) *linkedIn { //nolint: revive
+func LinkedIn(logger *slog.Logger) *linkedIn { //nolint: revive
 	return &linkedIn{
 		client: &http.Client{Timeout: 10 * time.Second},
 		logger: logger,
@@ -46,8 +39,8 @@ func NewLinkedIn(logger *slog.Logger) *linkedIn { //nolint: revive
 
 // search runs a linkedin search based on a query.
 // It will paginate over the search results until it doesn't find any more offers,
-// scrape the data and return a slice of offers ready to be added to the DB.
-func (l *linkedIn) scrape(query *db.Query) ([]db.CreateOfferParams, error) {
+// Scrape the data and return a slice of offers ready to be added to the DB.
+func (l *linkedIn) Scrape(query *db.Query) ([]db.CreateOfferParams, error) {
 	var totalOffers []db.CreateOfferParams
 	var offers []db.CreateOfferParams
 
@@ -71,21 +64,19 @@ func (l *linkedIn) scrape(query *db.Query) ([]db.CreateOfferParams, error) {
 func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, error) {
 	qp := url.Values{}
 	qp.Add(paramKeywords, query.Keywords)
-	if query.Location != "" {
-		qp.Add(paramLocation, query.Location)
-	}
+	qp.Add(paramLocation, query.Location)
 	if start != 0 {
 		qp.Add(paramStart, strconv.Itoa(start))
 	}
 
-	ftpr := lastWeek
+	ftpr := oneWeekInSeconds
+	// UpdatedAt is updated every time we run the query against LinkedIn.
+	// If the query has a valid UpdateAt field we don't use the default f_TPR
+	// value (a week) but the time difference between the last query and now.
 	if query.UpdatedAt.Valid {
-		// UpdatedAt is updated every time we run the query against LinkedIn.
-		// If the query has a valid UpdateAt field we don't use a week for
-		// the FTPR value but the time difference between the last query and now.
-		ftpr = fmt.Sprintf("r%d", int(time.Since(query.UpdatedAt.Time).Seconds()))
+		ftpr = int(time.Since(query.UpdatedAt.Time).Seconds())
 	}
-	qp.Add(paramFTPR, ftpr)
+	qp.Add(paramFTPR, fmt.Sprintf("r%d", ftpr))
 
 	url, err := url.Parse(linkedInURL)
 	if err != nil {
@@ -154,6 +145,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 	return jobs, nil
 }
 
+// normalize removes newlines and trims whitespace from a string.
 func normalize(s string) string {
 	str := strings.Split(s, "\n")
 	for i, v := range str {

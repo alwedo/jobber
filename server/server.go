@@ -2,12 +2,14 @@ package server
 
 import (
 	"database/sql"
-	_ "embed"
+	"embed"
 	"errors"
 	"fmt"
 	"html"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"text/template"
 	"time"
 
@@ -16,111 +18,161 @@ import (
 )
 
 const (
+	// Params.
 	queryParamKeywords = "keywords"
 	queryParamLocation = "location"
+
+	// Create RSS feed response for htmlx.
+	createResponse = `<p>done!<br><button class="copy-button" onclick="copyToClipboard('%s')">copy RSS feed</button> <button class="reset-button" onclick="resetForm()">create another RSS feed</button></p>`
+
+	// Assets.
+	assetsGlob = "assets/*"
+	assetIndex = "index.html"
+	assetRSS   = "rss.goxml"
 )
 
-//go:embed "rss.goxml"
-var rssTmpl string
-
-//go:embed "index.html"
-var indexHTML string
+//go:embed assets/*
+var assets embed.FS
 
 type server struct {
-	logger *slog.Logger
-	jobber *jobber.Jobber
+	logger    *slog.Logger
+	jobber    *jobber.Jobber
+	templates *template.Template
 }
 
-func New(l *slog.Logger, j *jobber.Jobber) *http.Server {
-	s := &server{logger: l, jobber: j}
+func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
+	t, err := template.New("").Funcs(funcMap).ParseFS(assets, assetsGlob)
+	if err != nil {
+		return nil, err
+	}
+	s := &server{logger: l, jobber: j, templates: t}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /feeds", s.feed())
 	mux.HandleFunc("POST /feeds", s.create())
 	mux.HandleFunc("/", s.index())
 
 	return &http.Server{
-		// TODO: add tls
 		Addr:              ":80",
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
+	}, nil
+}
+
+func (s *server) index() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" || r.Method != http.MethodGet {
+			http.NotFound(w, r)
+			return
+		}
+		if err := s.templates.ExecuteTemplate(w, assetIndex, nil); err != nil {
+			s.internalError(w, "failed to execute template in server.index", err)
+			return
+		}
 	}
 }
 
 func (s *server) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO: make params mandatory to avoid blank quries
-		k := r.FormValue(queryParamKeywords)
-		l := r.FormValue(queryParamLocation)
-		q, err := s.jobber.CreateQuery(k, l)
+		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			s.logger.Error("failed to create query", "keywords", k, "location", l, "error", err)
-			http.Error(w, "failed to create query", http.StatusInternalServerError)
+			s.logger.Info("missing params in server.create", slog.String("error", err.Error()))
+			return
+		}
+		if err := s.jobber.CreateQuery(params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
+			s.internalError(w, "failed to create query", err)
 			return
 		}
 
-		// TODO: do this with url.Encode
-		url := fmt.Sprintf("https://%s/feeds?keywords=%s&location=%s", r.Host, q.Keywords, q.Location)
-		_, err = w.Write([]byte(html.EscapeString(url)))
+		u, err := url.Parse("https://" + r.Host + "/feeds")
 		if err != nil {
-			s.logger.Error("failed to write response", slog.String("url", url), slog.String("error", err.Error()))
+			s.internalError(w, "failed to parse url in server.create", err)
+			return
+		}
+		u.RawQuery = params.Encode()
+
+		_, err = fmt.Fprintf(w, createResponse, u.String())
+		if err != nil {
+			s.logger.Error("failed to write response", slog.String("url", u.String()), slog.String("error", err.Error()))
 		}
 	}
 }
 
-func (s *server) index() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, indexHTML)
-	}
-}
-
-type data struct {
-	Keywords, Location string
-	Offers             []*db.Offer
+type feedData struct {
+	Keywords string
+	Location string
+	Offers   []*db.Offer
+	NotFound bool
 }
 
 func (s *server) feed() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		k := r.FormValue(queryParamKeywords)
-		l := r.FormValue(queryParamLocation)
-
-		offers, err := s.jobber.ListOffers(k, l)
+		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
+		if err != nil {
+			s.logger.Info("missing params in server.feed", slog.String("error", err.Error()))
+			return
+		}
+		d := &feedData{
+			Keywords: params.Get(queryParamKeywords),
+			Location: params.Get(queryParamLocation),
+		}
+		offers, err := s.jobber.ListOffers(params.Get(queryParamKeywords), params.Get(queryParamLocation))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				// TODO: return xml with invalid query?
-				s.logger.Info("no query found", "keywords", k, "location", l)
-				http.Error(w, "no query found", http.StatusNotFound)
+				d.NotFound = true
+				s.logger.Info("no query found in server.feed", slog.Any("params", params), slog.String("error", err.Error()))
+			} else {
+				s.internalError(w, "failed to get query in server.feed", err)
 				return
 			}
-			s.logger.Error("failed to get query: " + err.Error())
-			http.Error(w, "failed to get query", http.StatusInternalServerError)
-			return
 		}
-
+		d.Offers = offers
 		w.Header().Add("Content-Type", "application/rss+xml")
-		funcMap := template.FuncMap{
-			"createdAt": func(o *db.Offer) string {
-				return o.CreatedAt.Time.Format(time.RFC1123Z)
-			},
-			"title": func(o *db.Offer) string {
-				t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Time.Format("Jan 2"))
-				return html.EscapeString(t)
-			},
-		}
-		tmp, err := template.New("rss").Funcs(funcMap).Parse(rssTmpl)
-		if err != nil {
-			s.logger.Error("failed to parse template: " + err.Error())
-			http.Error(w, "failed to parse template", http.StatusInternalServerError)
-			return
-		}
-
-		if err := tmp.Execute(w, &data{
-			Keywords: k,
-			Location: l,
-			Offers:   offers,
-		}); err != nil {
-			s.logger.Error("failed to execute template: " + err.Error())
-			http.Error(w, "failed to execute template", http.StatusInternalServerError)
+		if err := s.templates.ExecuteTemplate(w, assetRSS, d); err != nil {
+			s.internalError(w, "failed to execute template in server.feed", err)
 			return
 		}
 	}
+}
+
+func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
+	s.logger.Error(msg, slog.String("error", err.Error()))
+	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
+}
+
+// validateParams receives a list of params, validate they've
+// been supplied in the request and normalizes them.
+// If a param is missing, it will respond with 400.
+func validateParams(params []string, w http.ResponseWriter, r *http.Request) (url.Values, error) {
+	missing := []string{}
+	valid := url.Values{}
+	for _, p := range params {
+		v := r.FormValue(p)
+		if v == "" {
+			missing = append(missing, p)
+			continue
+		}
+		valid.Add(p, strings.ToLower(strings.TrimSpace(v)))
+	}
+	if len(missing) != 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := fmt.Fprintf(w, "missing params: %v", missing)
+		if err != nil {
+			return nil, fmt.Errorf("unable to write response in validateParams: %w", err)
+		}
+		return nil, fmt.Errorf("missing params: %v", missing)
+	}
+	return valid, nil
+}
+
+var funcMap = template.FuncMap{
+	"createdAt": func(o *db.Offer) string {
+		return o.CreatedAt.Time.Format(time.RFC1123Z)
+	},
+	"title": func(o *db.Offer) string {
+		t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Time.Format("Jan 2"))
+		return html.EscapeString(t)
+	},
+	"now": func() string {
+		return time.Now().Format(time.RFC1123Z)
+	},
 }
