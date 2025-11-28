@@ -23,7 +23,7 @@ const (
 	queryParamLocation = "location"
 
 	// Create RSS feed response for htmlx.
-	createResponse = `<p>RSS Feed Created Successfully!</p><p><button class="copy-button" onclick="copyToClipboard('%s')">Copy Feed URL</button></p>`
+	createResponse = `<p>done!<br><button class="copy-button" onclick="copyToClipboard('%s')">copy RSS feed</button> <button class="reset-button" onclick="resetForm()">create another RSS feed</button></p>`
 
 	// Assets.
 	assetsGlob = "assets/*"
@@ -59,7 +59,11 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 }
 
 func (s *server) index() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" || r.Method != http.MethodGet {
+			http.NotFound(w, r)
+			return
+		}
 		if err := s.templates.ExecuteTemplate(w, assetIndex, nil); err != nil {
 			s.internalError(w, "failed to execute template in server.index", err)
 			return
