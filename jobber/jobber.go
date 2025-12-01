@@ -53,6 +53,7 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (
 	for _, q := range queries {
 		j.scheduleQuery(q, false)
 	}
+	// TODO: schedule a job to delete offers older than 7 days.
 	j.sched.Start()
 
 	return j, func() {
@@ -86,6 +87,9 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	// After creating a new query we schedule it and run it immediately
 	// so the feed has initial data. In the frontend we use a spinner
 	// with htmx while this is being processed.
+	// TODO: currently the scheduler is async and this return immediately.
+	//       create a job with a callback in scheduleQuery and a channel
+	//       to block until the job is done.
 	j.scheduleQuery(query, true)
 
 	return nil
@@ -133,6 +137,7 @@ func (j *Jobber) runQuery(qID int64) {
 	offers, err := j.scpr.Scrape(q)
 	if err != nil {
 		j.logger.Error("unable to perform linkedIn search in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+		return
 	}
 	if len(offers) > 0 {
 		for _, o := range offers {
