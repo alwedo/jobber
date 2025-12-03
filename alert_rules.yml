@@ -1,0 +1,12 @@
+groups:
+    - name: jobber_alerts
+      interval: 30s
+      rules:
+          - alert: JobberDown
+            expr: up{job="jobber"} == 0
+            for: 10s
+            labels:
+                severity: critical
+            annotations:
+                summary: "Jobber server is down"
+                description: "Jobber has been unreachable for more than 10 seconds"

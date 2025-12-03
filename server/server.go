@@ -15,6 +15,8 @@ import (
 
 	"github.com/Alvaroalonsobabbel/jobber/db"
 	"github.com/Alvaroalonsobabbel/jobber/jobber"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -34,6 +36,11 @@ const (
 //go:embed assets/*
 var assets embed.FS
 
+var requestDuration = prometheus.NewHistogramVec(
+	prometheus.HistogramOpts{Name: "http_request_duration_seconds"},
+	[]string{"code", "method"},
+)
+
 type server struct {
 	logger    *slog.Logger
 	jobber    *jobber.Jobber
@@ -41,14 +48,17 @@ type server struct {
 }
 
 func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
+	prometheus.MustRegister(requestDuration)
+
 	t, err := template.New("").Funcs(funcMap).ParseFS(assets, assetsGlob)
 	if err != nil {
 		return nil, err
 	}
 	s := &server{logger: l, jobber: j, templates: t}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /feeds", s.feed())
-	mux.HandleFunc("POST /feeds", s.create())
+	mux.Handle("GET /feeds", s.withMetrics(s.feed()))
+	mux.Handle("POST /feeds", s.withMetrics(s.create()))
+	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("/", s.index())
 
 	return &http.Server{
@@ -139,6 +149,10 @@ func (s *server) feed() http.HandlerFunc {
 func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 	s.logger.Error(msg, slog.String("error", err.Error()))
 	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
+}
+
+func (s *server) withMetrics(next http.Handler) http.Handler {
+	return promhttp.InstrumentHandlerDuration(requestDuration, next)
 }
 
 // validateParams receives a list of params, validate they've
