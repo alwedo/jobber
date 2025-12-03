@@ -14,6 +14,23 @@ import (
 	"github.com/Alvaroalonsobabbel/jobber/scrape"
 )
 
+func TestConstructor(t *testing.T) {
+	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+	d, dbCloser := db.NewTestDB(t)
+	defer dbCloser()
+	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraper)
+	defer jCloser()
+
+	t.Run("constructor schedules existing queries", func(t *testing.T) {
+		wantJobs := 3 // Three queries from DB seed.
+		gotJobs := len(j.sched.Jobs())
+
+		if wantJobs != gotJobs {
+			t.Errorf("wanted %d initially scheduled jobs, got %d", wantJobs, gotJobs)
+		}
+	})
+}
+
 func TestCreateQuery(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
@@ -118,4 +135,49 @@ func TestListOffers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunQuery(t *testing.T) {
+	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+	d, dbCloser := db.NewTestDB(t)
+	defer dbCloser()
+	mockScraper := scrape.MockScraper
+	j, jCloser := NewConfigurableJobber(l, d, mockScraper)
+	defer jCloser()
+
+	t.Run("with valid query", func(t *testing.T) {
+		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "golang", Location: "berlin"})
+		if err != nil {
+			t.Errorf("unable to retrieve seed query: %v", err)
+		}
+		j.runQuery(q.ID)
+
+		t.Run("it calls the scraper", func(t *testing.T) {
+			if *mockScraper.LastQuery != *q {
+				t.Errorf("wanted ran query to be %v, got %v", q, mockScraper.LastQuery)
+			}
+		})
+		t.Run("it updates the UpdatedAt field used for removing old queries", func(t *testing.T) {
+			qq, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "golang", Location: "berlin"})
+			if err != nil {
+				t.Errorf("unable to retrieve seed query: %v", err)
+			}
+			if q.UpdatedAt.Time.After(qq.UpdatedAt.Time) {
+				t.Errorf("wanted the query initial UpdatedAt value to be before the new value")
+			}
+		})
+		// TODO: test adding offer and ignoring existing offer
+	})
+
+	t.Run("with older than 7 days query deletes the query", func(t *testing.T) {
+		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "python", Location: "san francisco"})
+		if err != nil {
+			t.Errorf("unable to retrieve seed query: %v", err)
+		}
+		j.runQuery(q.ID)
+		_, err = d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "python", Location: "san francisco"})
+		if !errors.Is(err, sql.ErrNoRows) {
+			t.Errorf("query should have been deleted but got: %v", err)
+		}
+	})
 }

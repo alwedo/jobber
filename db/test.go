@@ -13,10 +13,10 @@ import (
 )
 
 var seed = `
-INSERT INTO queries (keywords, location) VALUES
-('python', 'san francisco'),
-('data scientist', 'new york'),
-('golang', 'berlin');
+INSERT INTO queries (keywords, location, queried_at) VALUES
+('python', 'san francisco', CURRENT_TIMESTAMP - INTERVAL '8 days'),
+('data scientist', 'new york', CURRENT_TIMESTAMP),
+('golang', 'berlin', CURRENT_TIMESTAMP);
 INSERT INTO offers (id, title, company, location, posted_at) VALUES
 ('offer_001', 'Senior Python Developer', 'TechCorp Inc', 'San Francisco, CA', CURRENT_TIMESTAMP - INTERVAL '8 days'),
 ('existing_offer', 'Junior Golang Dweeb', 'Späti GmbH', 'Berlin', CURRENT_TIMESTAMP);

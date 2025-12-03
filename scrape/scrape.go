@@ -9,9 +9,12 @@ type Scraper interface {
 	Scrape(*db.Query) ([]db.CreateOfferParams, error)
 }
 
-type mockScraper struct{}
+type mockScraper struct {
+	LastQuery *db.Query
+}
 
-func (m *mockScraper) Scrape(*db.Query) ([]db.CreateOfferParams, error) {
+func (m *mockScraper) Scrape(q *db.Query) ([]db.CreateOfferParams, error) {
+	m.LastQuery = q
 	return []db.CreateOfferParams{}, nil
 }
 
