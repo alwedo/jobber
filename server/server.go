@@ -23,7 +23,7 @@ const (
 	queryParamLocation = "location"
 
 	// Create RSS feed response for htmlx.
-	createResponse = `<p>done!<br><input value='%s' readonly><br><button class="copy-button" onclick="copyToClipboard('%s')">copy RSS feed</button> <button class="reset-button" onclick="resetForm()">create another RSS feed</button></p>`
+	createResponse = `<p>done!<br><input value='%[1]s' readonly><br><button class="copy-button" onclick="copyToClipboard('%[1]s	')">copy RSS feed</button> <button class="reset-button" onclick="resetForm()">create another RSS feed</button></p>`
 
 	// Assets.
 	assetsGlob = "assets/*"
