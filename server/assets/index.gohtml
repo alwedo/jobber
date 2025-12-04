@@ -1,0 +1,84 @@
+{{template "top" .}}
+<main>
+    <div class="centered-form">
+        <div id="content" class="spinner htmx-indicator">
+            <p>create a new RSS feed...</p>
+            <form
+                style="display: inline"
+                hx-post="/feeds"
+                hx-indicator=".spinner"
+                hx-target="#content"
+                hx-swap="innerHTML"
+            >
+                <input
+                    type="text"
+                    name="keywords"
+                    placeholder="keywords, ie. barista"
+                    required
+                />
+                <input type="text" name="location" placeholder="location, ie. berlin" />
+                <button type="submit">create RSS feed</button>
+            </form>
+        </div>
+        <p class="spinner htmx-indicator">Loading...</p>
+    </div>
+    <p style="text-align: center"><b>good to know...</b><br>
+        jobs from LinkedIn only (for now)<br>
+        feeds are refreshed hourly<br>
+        unused feeds are deleted after a week<br>-</p>
+
+    <script>
+        function copyToClipboard(url) {
+            navigator.clipboard
+                .writeText(url)
+                .then(() => {
+                    showCopyFeedback();
+                })
+                .catch((err) => {
+                    console.error("Failed to copy: ", err);
+                    showCopyFeedback("Failed to copy");
+                });
+        }
+
+        function showCopyFeedback(message = "Copied!") {
+            let feedback = document.querySelector(".copy-feedback");
+            if (!feedback) {
+                feedback = document.createElement("div");
+                feedback.className = "copy-feedback";
+                document
+                    .querySelector(".copy-button")
+                    .parentNode.appendChild(feedback);
+            }
+            feedback.textContent = message;
+            feedback.classList.add("show");
+            setTimeout(() => {
+                feedback.classList.remove("show");
+            }, 2000);
+        }
+
+        function resetForm() {
+            const content = document.getElementById("content");
+            content.innerHTML = `
+                <p>create a new RSS feed...</p>
+                <form
+                    style="display: inline"
+                    hx-post="/feeds"
+                    hx-indicator=".spinner"
+                    hx-target="#content"
+                    hx-swap="innerHTML"
+                >
+                    <input
+                        type="text"
+                        name="keywords"
+                        placeholder="keywords, ie. barista"
+                        required
+                    />
+                    <input type="text" name="location" placeholder="location, ie. berlin" />
+                    <button type="submit">create RSS feed</button>
+                </form>
+            `;
+            htmx.process(content);
+        }
+    </script>
+</main>
+{{template "bottom" .}}
