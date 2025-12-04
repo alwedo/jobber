@@ -24,13 +24,11 @@ const (
 	queryParamKeywords = "keywords"
 	queryParamLocation = "location"
 
-	// Create RSS feed response for htmlx.
-	createResponse = `<p>done!<br><button class="copy-button" onclick="copyToClipboard('%s')">copy RSS feed</button> <button class="reset-button" onclick="resetForm()">create another RSS feed</button></p>`
-
 	// Assets.
-	assetsGlob = "assets/*"
-	assetIndex = "index.gohtml"
-	assetRSS   = "rss.goxml"
+	assetsGlob          = "assets/*"
+	assetIndex          = "index.gohtml"
+	assetRSS            = "rss.goxml"
+	assetCreateResponse = "create_response.gohtml"
 )
 
 //go:embed assets/*
@@ -100,9 +98,9 @@ func (s *server) create() http.HandlerFunc {
 		}
 		u.RawQuery = params.Encode()
 
-		_, err = fmt.Fprintf(w, createResponse, u.String())
-		if err != nil {
-			s.logger.Error("failed to write response", slog.String("url", u.String()), slog.String("error", err.Error()))
+		if err := s.templates.ExecuteTemplate(w, assetCreateResponse, u.String()); err != nil {
+			s.internalError(w, "failed to execute template in server.create", err)
+			return
 		}
 	}
 }
