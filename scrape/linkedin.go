@@ -90,7 +90,12 @@ func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, e
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received status code: %d", resp.StatusCode)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read response body: %w", err)
+		}
+		defer resp.Body.Close()
+		return nil, fmt.Errorf("received status code: %d, message: %s, headers: %v", resp.StatusCode, string(body), resp.Header)
 	}
 	return resp.Body, nil
 }
