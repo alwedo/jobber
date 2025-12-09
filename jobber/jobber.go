@@ -18,7 +18,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Jobber struct {
@@ -46,7 +45,7 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (
 		sched:  sched,
 	}
 
-	// Initial queries scheduling.
+	// Initial job scheduling.
 	queries, err := j.db.ListQueries(j.ctx)
 	if err != nil {
 		j.logger.Error("unable to list queries in jobber.scheduleQueries", slog.String("error", err.Error()))
@@ -54,7 +53,7 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (
 	for _, q := range queries {
 		j.scheduleQuery(q)
 	}
-	// TODO: schedule a job to delete offers older than 7 days.
+	j.schedDeleteOldOffers()
 	j.sched.Start()
 
 	return j, func() {
@@ -123,10 +122,7 @@ func (j *Jobber) ListOffers(keywords, location string) ([]*db.Offer, error) {
 	if err := j.db.UpdateQueryQAT(j.ctx, q.ID); err != nil {
 		j.logger.Error("unable to update query timestamp", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
-	return j.db.ListOffers(j.ctx, &db.ListOffersParams{
-		ID:       q.ID,
-		PostedAt: pgtype.Timestamptz{Time: time.Now().AddDate(0, 0, -7), Valid: true}, // List offers posted in the last 7 days.
-	})
+	return j.db.ListOffers(j.ctx, q.ID)
 }
 
 func (j *Jobber) runQuery(qID int64) {
@@ -204,4 +200,20 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	}
 
 	j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
+}
+
+func (j *Jobber) schedDeleteOldOffers() {
+	at := "0 2 * * *" // Every day at 2:00 am.
+	_, err := j.sched.NewJob(
+		gocron.CronJob(at, false),
+		gocron.NewTask(func() {
+			if err := j.db.DeleteOldOffers(j.ctx); err != nil {
+				j.logger.Error("unable to delete old offers", slog.String("error", err.Error()))
+			}
+		}),
+		gocron.WithStartAt(gocron.WithStartImmediately()),
+	)
+	if err != nil {
+		j.logger.Error("unable to schedule DeleteOldOffers job", slog.String("error", err.Error()))
+	}
 }

@@ -60,7 +60,6 @@ FROM
     JOIN offers o ON qo.offer_id = o.id
 WHERE
     q.id = $1
-    AND o.posted_at >= $2
 ORDER BY
     o.posted_at DESC;
 
@@ -68,3 +67,7 @@ ORDER BY
 INSERT INTO query_offers (query_id, offer_id)
 VALUES ($1, $2)
 ON CONFLICT (query_id, offer_id) DO NOTHING;
+
+-- name: DeleteOldOffers :exec
+DELETE FROM offers
+WHERE posted_at < NOW() - INTERVAL '7 days';

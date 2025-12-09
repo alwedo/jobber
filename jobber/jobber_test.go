@@ -21,12 +21,25 @@ func TestConstructor(t *testing.T) {
 	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraper)
 	defer jCloser()
 
+	// Give the scheduler time to process initial jobs.
+	time.Sleep(100 * time.Millisecond)
+
 	t.Run("constructor schedules existing queries", func(t *testing.T) {
-		wantJobs := 4 // Four queries from DB seed.
+		wantJobs := 5 // Four queries from DB seed + old offers deletetion.
 		gotJobs := len(j.sched.Jobs())
 
 		if wantJobs != gotJobs {
 			t.Errorf("wanted %d initially scheduled jobs, got %d", wantJobs, gotJobs)
+		}
+	})
+
+	t.Run("old offers should've been deleted", func(t *testing.T) {
+		offers, err := d.ListOffers(context.Background(), 1)
+		if err != nil {
+			t.Errorf("wanted no error, got: %v", err)
+		}
+		if len(offers) != 1 { // query id 1 has 2 jobs in the seed, one is 8 days old.
+			t.Errorf("wanted 1, got %d", len(offers))
 		}
 	})
 }
@@ -55,7 +68,7 @@ func TestCreateQuery(t *testing.T) {
 			t.Errorf("expected location to be '%s', got %s", l, q.Location)
 		}
 		gotJobs := len(j.sched.Jobs())
-		wantJobs := 5 // Four queries from DB seed + recently created.
+		wantJobs := 6 // Four queries from DB seed + recently created + old offers deletetion.
 		if wantJobs != gotJobs {
 			t.Errorf("wanted %d jobs, got %d", wantJobs, gotJobs)
 		}
@@ -81,7 +94,7 @@ func TestCreateQuery(t *testing.T) {
 		if len(q) != 5 { // 4 from the seed + last test.
 			t.Errorf("expected number of queries to be 4, got %d", len(q))
 		}
-		wantJobs := 5 // 4 from the seed + last test.
+		wantJobs := 6 // 4 from the seed + last test + old offers deletetion.
 		gotJobs := len(j.sched.Jobs())
 		if wantJobs != gotJobs {
 			t.Errorf("want %d jobs, got %d", wantJobs, gotJobs)
@@ -95,6 +108,9 @@ func TestListOffers(t *testing.T) {
 	defer dbCloser()
 	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraper)
 	defer jCloser()
+
+	// Give the scheduler time to process initial jobs.
+	time.Sleep(100 * time.Millisecond)
 
 	tests := []struct {
 		name       string
@@ -111,10 +127,11 @@ func TestListOffers(t *testing.T) {
 			wantErr:    nil,
 		},
 		{
-			name:       "valid query with older than 7 days offers",
-			keywords:   "python",
-			location:   "san francisco",
-			wantOffers: 1, // query has two offers, one is older than 7 days.
+			name:     "valid query with older than 7 days offers",
+			keywords: "python",
+			location: "san francisco",
+			// Query has two offers in the DB seed. One is older than 7 days and should've be deleted.
+			wantOffers: 1,
 		},
 		{
 			name:     "invalid query with no offers",
@@ -180,7 +197,7 @@ func TestRunQuery(t *testing.T) {
 		}
 		j.runQuery(q.ID)
 		gotJobs := len(j.sched.Jobs())
-		wantJobs := 5 // Four queries from DB seed + retryable job
+		wantJobs := 6 // Four queries from DB seed + retryable job + old offers deletetion
 		if wantJobs != gotJobs {
 			t.Errorf("wanted %d  jobs in queue, got %d", wantJobs, gotJobs)
 		}

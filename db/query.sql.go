@@ -78,6 +78,16 @@ func (q *Queries) CreateQueryOfferAssoc(ctx context.Context, arg *CreateQueryOff
 	return err
 }
 
+const deleteOldOffers = `-- name: DeleteOldOffers :exec
+DELETE FROM offers
+WHERE posted_at < NOW() - INTERVAL '7 days'
+`
+
+func (q *Queries) DeleteOldOffers(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteOldOffers)
+	return err
+}
+
 const deleteQuery = `-- name: DeleteQuery :exec
 DELETE FROM queries
 WHERE
@@ -150,18 +160,12 @@ FROM
     JOIN offers o ON qo.offer_id = o.id
 WHERE
     q.id = $1
-    AND o.posted_at >= $2
 ORDER BY
     o.posted_at DESC
 `
 
-type ListOffersParams struct {
-	ID       int64
-	PostedAt pgtype.Timestamptz
-}
-
-func (q *Queries) ListOffers(ctx context.Context, arg *ListOffersParams) ([]*Offer, error) {
-	rows, err := q.db.Query(ctx, listOffers, arg.ID, arg.PostedAt)
+func (q *Queries) ListOffers(ctx context.Context, id int64) ([]*Offer, error) {
+	rows, err := q.db.Query(ctx, listOffers, id)
 	if err != nil {
 		return nil, err
 	}
