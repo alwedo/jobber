@@ -37,7 +37,7 @@ func main() {
 	svr, err := server.New(log, j)
 	if err != nil {
 		log.Error("unable to create server", slog.Any("error", err))
-		os.Exit(1)
+		return
 	}
 	defer func() {
 		if err := svr.Shutdown(ctx); err != nil {
