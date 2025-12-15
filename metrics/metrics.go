@@ -34,6 +34,24 @@ var (
 		},
 		[]string{"path"},
 	)
+
+	// Labels: "id", "tags", "cron"
+	JobberScheduledQueries = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "jobber_schedulded_queries",
+			Help: "Total Schedulded Queries.",
+		},
+		[]string{"id", "tags", "cron"},
+	)
+
+	// Labels: "keywords", "location"
+	JobberNewQueries = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "jobber_new_queries",
+			Help: "Total new Queries created.",
+		},
+		[]string{"keywords", "location"},
+	)
 )
 
 func Init() {
@@ -41,6 +59,8 @@ func Init() {
 		httpRequests,
 		httpRequestsTotal,
 		httpRequestsInFlight,
+		JobberScheduledQueries,
+		JobberNewQueries,
 	)
 }
 

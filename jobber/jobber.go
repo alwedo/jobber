@@ -9,10 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"log/slog"
 	"time"
 
 	"github.com/alwedo/jobber/db"
+	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/scrape"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
@@ -83,6 +85,7 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 		slog.String("keywords", keywords),
 		slog.String("location", location),
 	)
+	metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
 
 	// After creating a new query we schedule it and run it immediately
 	// so the feed has initial data. In the frontend we use a spinner
@@ -138,6 +141,7 @@ func (j *Jobber) runQuery(qID int64) {
 			j.logger.Error("unable to delete query in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 		}
 		j.sched.RemoveByTags(q.Keywords + q.Location)
+		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Dec()
 
 		j.logger.Info("deleting unused query", slog.Int64("queryID", q.ID), slog.String("keywords", q.Keywords), slog.String("location", q.Location))
 		return
@@ -199,6 +203,7 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 		return
 	}
 
+	metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, cron).Inc()
 	j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 }
 
