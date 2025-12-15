@@ -12,6 +12,7 @@ import (
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/jobber"
+	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/server"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "golang.org/x/crypto/x509roots/fallback" // CA bundle for FROM Scratch
@@ -25,6 +26,8 @@ func main() {
 		c      = make(chan os.Signal, 1)
 	)
 
+	metrics.Init() // will panic if fails to init.
+
 	d, dbCloser := initDB(ctx, log)
 	defer dbCloser()
 
@@ -34,7 +37,7 @@ func main() {
 	svr, err := server.New(log, j)
 	if err != nil {
 		log.Error("unable to create server", slog.Any("error", err))
-		return
+		os.Exit(1)
 	}
 	defer func() {
 		if err := svr.Shutdown(ctx); err != nil {
