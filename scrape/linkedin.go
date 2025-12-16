@@ -119,7 +119,7 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 				return nil, fmt.Errorf("unable to read response body: %w", err)
 			}
 			defer resp.Body.Close()
-			return nil, fmt.Errorf("received status code: %d, message: %s", resp.StatusCode, string(body))
+			return nil, fmt.Errorf("received status code: %d, url: %s, message: %s", resp.StatusCode, url.String(), string(body))
 		}
 		retry = false
 	}
