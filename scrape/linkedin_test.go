@@ -19,13 +19,14 @@ import (
 func TestFetchOffersPage(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
 	l := &linkedIn{&http.Client{Transport: mockResp}}
+	ctx := context.Background()
 
 	t.Run("first time query", func(t *testing.T) {
 		query := &db.Query{
 			Keywords: "golang",
 			Location: "the moon",
 		}
-		resp, err := l.fetchOffersPage(query, 0)
+		resp, err := l.fetchOffersPage(ctx, query, 0)
 		if err != nil {
 			t.Errorf("error fetching offers: %s", err.Error())
 		}
@@ -70,7 +71,7 @@ func TestFetchOffersPage(t *testing.T) {
 			Location:  "the moon",
 			UpdatedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().Add(-time.Hour)},
 		}
-		resp, err := l.fetchOffersPage(query, 0)
+		resp, err := l.fetchOffersPage(ctx, query, 0)
 		if err != nil {
 			t.Errorf("error fetching offers: %s", err.Error())
 		}
@@ -90,7 +91,7 @@ func TestFetchOffersPage(t *testing.T) {
 				}
 				pages := []int{0, 10, 20}
 				for _, p := range pages {
-					resp, err := l.fetchOffersPage(query, p)
+					resp, err := l.fetchOffersPage(ctx, query, p)
 					if err != nil {
 						t.Errorf("expected no error, got: %v", err)
 					}
@@ -112,7 +113,7 @@ func TestFetchOffersPage(t *testing.T) {
 				for _, p := range pages {
 					switch p {
 					case 0:
-						resp, err := l.fetchOffersPage(query, p)
+						resp, err := l.fetchOffersPage(ctx, query, p)
 						if err != nil {
 							t.Errorf("expected no error, got: %v", err)
 						}
@@ -120,7 +121,7 @@ func TestFetchOffersPage(t *testing.T) {
 							t.Errorf("expected response body not to be nil")
 						}
 					default:
-						resp, err := l.fetchOffersPage(query, p)
+						resp, err := l.fetchOffersPage(ctx, query, p)
 						if !errors.Is(err, ErrRetryable) {
 							t.Errorf("expected err to be ErrRetryable, got: %v", err)
 						}

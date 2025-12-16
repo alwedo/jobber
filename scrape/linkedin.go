@@ -37,21 +37,26 @@ func LinkedIn() *linkedIn { //nolint: revive
 // search runs a linkedin search based on a query.
 // It will paginate over the search results until it doesn't find any more offers,
 // Scrape the data and return a slice of offers ready to be added to the DB.
-func (l *linkedIn) Scrape(_ context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
+func (l *linkedIn) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
 	var totalOffers []db.CreateOfferParams
 	var offers []db.CreateOfferParams
 
 	for i := 0; i == 0 || len(offers) == searchInterval; i += searchInterval {
-		resp, err := l.fetchOffersPage(query, i)
-		if err != nil {
-			// If fetchOffersPage fails we return the accumulated offers so far.
-			return totalOffers, fmt.Errorf("failed to fetchOffersPage in linkedIn.search: %w", err)
+		select {
+		case <-ctx.Done():
+			return totalOffers, fmt.Errorf("linkedIn.Scrape process was canceled: %w", ctx.Err())
+		default:
+			resp, err := l.fetchOffersPage(ctx, query, i)
+			if err != nil {
+				// If fetchOffersPage fails we return the accumulated offers so far.
+				return totalOffers, fmt.Errorf("failed to fetchOffersPage in linkedIn.Scrape: %w", err)
+			}
+			offers, err = l.parseLinkedInBody(resp)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parseLinkedInBody body linkedIn.Scrape: %v", err)
+			}
+			totalOffers = append(totalOffers, offers...)
 		}
-		offers, err = l.parseLinkedInBody(resp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parseLinkedInBody body linkedIn.search: %v", err)
-		}
-		totalOffers = append(totalOffers, offers...)
 	}
 
 	return totalOffers, nil
@@ -59,7 +64,7 @@ func (l *linkedIn) Scrape(_ context.Context, query *db.Query) ([]db.CreateOfferP
 
 // fetchOffersPage gets job offers from LinkedIn based on the passed query params.
 // This returns a list of max 10 elements. We move the start by increments of 10.
-func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, error) {
+func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start int) (io.ReadCloser, error) {
 	qp := url.Values{}
 	qp.Add(paramKeywords, query.Keywords)
 	qp.Add(paramLocation, query.Location)
@@ -82,6 +87,11 @@ func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, e
 	}
 	url.RawQuery = qp.Encode()
 
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
 	// Exponential backoff
 	var (
 		retry   = true
@@ -91,7 +101,7 @@ func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, e
 	)
 
 	for retry {
-		resp, cErr = l.client.Get(url.String())
+		resp, cErr = l.client.Do(req)
 		if cErr != nil {
 			return nil, fmt.Errorf("failed to fetch URL: %w", err)
 		}

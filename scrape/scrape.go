@@ -32,12 +32,8 @@ type mockScraper struct {
 }
 
 func (m *mockScraper) Scrape(_ context.Context, q *db.Query) ([]db.CreateOfferParams, error) {
-	o := []db.CreateOfferParams{}
 	m.LastQuery = q
-	if q.Keywords == "retry" {
-		return o, ErrRetryable
-	}
-	return o, nil
+	return []db.CreateOfferParams{}, nil
 }
 
 var MockScraper = &mockScraper{}
