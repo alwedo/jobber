@@ -155,7 +155,7 @@ func (j *Jobber) runQuery(qID int64) {
 			// Retryable errors still bring data. We log a warning for further analysis and continue.
 			j.logger.Warn("exhausted retries in jobber.runQuery", slog.Int64("queryID", q.ID), slog.Any("error", err))
 		} else {
-			j.logger.Error("srape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+			j.logger.Error("scrape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 			return
 		}
 	}
