@@ -190,19 +190,6 @@ func TestRunQuery(t *testing.T) {
 		// TODO: test adding offer and ignoring existing offer
 	})
 
-	t.Run("scraper retryable error adds job to sched", func(t *testing.T) {
-		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "retry", Location: "berlin"})
-		if err != nil {
-			t.Errorf("unable to retrieve seed query: %v", err)
-		}
-		j.runQuery(q.ID)
-		gotJobs := len(j.sched.Jobs())
-		wantJobs := 6 // Four queries from DB seed + retryable job + old offers deletetion
-		if wantJobs != gotJobs {
-			t.Errorf("wanted %d  jobs in queue, got %d", wantJobs, gotJobs)
-		}
-	})
-
 	t.Run("with older than 7 days query deletes the query", func(t *testing.T) {
 		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "python", Location: "san francisco"})
 		if err != nil {

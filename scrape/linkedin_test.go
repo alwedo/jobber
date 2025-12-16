@@ -84,15 +84,57 @@ func TestFetchOffersPage(t *testing.T) {
 		}
 	})
 
-	t.Run("retryable error", func(t *testing.T) {
-		query := &db.Query{
-			Keywords: "retry", // retry keyword makes mock to return 429
-			Location: "the moon",
-		}
-		_, err := l.fetchOffersPage(query, 0)
-		if !errors.Is(err, ErrRetryable) {
-			t.Errorf("wanted err to be ErrRetryable, got %v", err)
-		}
+	t.Run("retryable cases", func(t *testing.T) {
+		t.Run("working exponential backoff", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				query := &db.Query{
+					Keywords: "retry", // retry keyword makes mock to return 429
+					Location: "the moon",
+				}
+				pages := []int{0, 10, 20}
+				for _, p := range pages {
+					resp, err := l.fetchOffersPage(query, p)
+					if err != nil {
+						t.Errorf("expected no error, got: %v", err)
+					}
+					if resp == nil {
+						t.Errorf("expected response body not to be nil")
+					}
+				}
+				synctest.Wait()
+			})
+		})
+		t.Run("exhausted exponential backoff", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				query := &db.Query{
+					// retry-fail keyword makes mock to return 429 all the time after the first call.
+					Keywords: "retry-fail",
+					Location: "the moon",
+				}
+				pages := []int{0, 10, 20}
+				for _, p := range pages {
+					switch p {
+					case 0:
+						resp, err := l.fetchOffersPage(query, p)
+						if err != nil {
+							t.Errorf("expected no error, got: %v", err)
+						}
+						if resp == nil {
+							t.Errorf("expected response body not to be nil")
+						}
+					default:
+						resp, err := l.fetchOffersPage(query, p)
+						if !errors.Is(err, ErrRetryable) {
+							t.Errorf("expected err to be ErrRetryable, got: %v", err)
+						}
+						if resp != nil {
+							t.Errorf("expected response body to be nil, got %v", resp)
+						}
+					}
+				}
+				synctest.Wait()
+			})
+		})
 	})
 }
 
@@ -129,52 +171,84 @@ func TestParseLinkedInBody(t *testing.T) {
 	}
 }
 
-func TestSearch(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		mockResp := newLinkedInMockResp(t)
-		l := &linkedIn{
-			client: &http.Client{Transport: mockResp},
-			logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
-		}
-		query := &db.Query{
-			Keywords: "golang",
-			Location: "the moon",
-		}
-		offers, err := l.Scrape(query)
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		synctest.Wait()
-		if len(offers) != 27 {
-			t.Errorf("expected 27 offers, got %d", len(offers))
-		}
+func TestScrape(t *testing.T) {
+	mockResp := newLinkedInMockResp(t)
+	l := &linkedIn{
+		client: &http.Client{Transport: mockResp},
+		logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
+	}
+
+	t.Run("expected behaviour", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			query := &db.Query{Keywords: "golang", Location: "the moon"}
+			offers, err := l.Scrape(query)
+			if err != nil {
+				t.Errorf("expected no error, got %v", err)
+			}
+			synctest.Wait()
+			if len(offers) != 27 {
+				t.Errorf("expected 27 offers, got %d", len(offers))
+			}
+		})
+	})
+	t.Run("too many retries don't discard data", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			query := &db.Query{Keywords: "retry-fail", Location: "the moon"}
+			offers, err := l.Scrape(query)
+			if !errors.Is(err, ErrRetryable) {
+				t.Errorf("expected ErrRetryable, got: %v", err)
+			}
+			synctest.Wait()
+			if len(offers) != 10 {
+				t.Errorf("expected 10 offers from the first page, got %d", len(offers))
+			}
+		})
 	})
 }
 
 type linkedInMockResp struct {
-	t   testing.TB
-	req *http.Request
+	t       testing.TB
+	req     *http.Request
+	lastReq time.Time
 }
 
 func (h *linkedInMockResp) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Save the last request for further inspection
 	h.req = req
+
+	status := http.StatusOK
+	// Mock 429. We currently don't know LinkedIn's 429 strategy.
+	// We're starting with 1 second delay and increase if it doesn't work.
+	if req.URL.Query().Get(paramKeywords) == "retry" {
+		if time.Since(h.lastReq) < time.Second {
+			status = http.StatusTooManyRequests
+		}
+	}
+
+	// We want to make sure the outcome when exhausting all retry posibilities.
+	// We also want scrapings with pagination to return patrial results when failing.
+	// The keyword 'retry-fail' will always return 429 after the first call.
+	if req.URL.Query().Get(paramKeywords) == "retry-fail" && req.URL.Query().Get("start") != "" {
+		status = http.StatusTooManyRequests
+	}
+
+	// Mock LinkedIn pagination strategy
 	fn := "test_data/linkedin1.html"
-	switch h.req.URL.Query().Get("start") {
+	switch req.URL.Query().Get("start") {
 	case "10":
 		fn = "test_data/linkedin2.html"
 	case "20":
 		fn = "test_data/linkedin3.html"
 	}
 
+	// Return the html according to pagination
 	body, err := os.Open(fn)
 	if err != nil {
 		h.t.Fatalf("failed to open %s in mockResp.RoundTrip: %s", fn, err)
 	}
 
-	status := http.StatusOK
-	if req.URL.Query().Get(paramKeywords) == "retry" {
-		status = http.StatusTooManyRequests
-	}
+	// Save last request time for mocking 429
+	h.lastReq = time.Now()
 
 	return &http.Response{
 		StatusCode: status,

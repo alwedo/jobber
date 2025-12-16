@@ -151,20 +151,12 @@ func (j *Jobber) runQuery(qID int64) {
 	offers, err := j.scpr.Scrape(q)
 	if err != nil {
 		if errors.Is(err, scrape.ErrRetryable) {
-			// Upon retryable errors we queue a stand alone job to be run in 5 min.
-			_, jobErr := j.sched.NewJob(
-				gocron.OneTimeJob(gocron.OneTimeJobStartDateTime(time.Now().Add(5*time.Minute))),
-				gocron.NewTask(func(q int64) { j.runQuery(q) }, q.ID),
-			)
-			if jobErr != nil {
-				j.logger.Error("unable to schedule retry job in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", jobErr.Error()))
-				return
-			}
-			j.logger.Info("retryable error for linkedIn search in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+			// Retryable errors still bring data. We log a warning for further analysis and continue.
+			j.logger.Warn("exhausted retries in jobber.runQuery", slog.Int64("queryID", q.ID), slog.Any("error", err))
+		} else {
+			j.logger.Error("srape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 			return
 		}
-		j.logger.Error("unable to perform linkedIn search in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
-		return
 	}
 	if len(offers) > 0 {
 		for _, o := range offers {

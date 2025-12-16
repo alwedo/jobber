@@ -23,6 +23,7 @@ const (
 	paramFTPR        = "f_TPR"    // Time Posted Range. Values are in seconds, starting with 'r', ie. r86400 = Past 24 hours
 	searchInterval   = 10         // LinkedIn pagination interval
 	oneWeekInSeconds = 604800
+	maxRetries       = 5 // Exponential backoff limit.
 )
 
 type linkedIn struct {
@@ -47,7 +48,8 @@ func (l *linkedIn) Scrape(query *db.Query) ([]db.CreateOfferParams, error) {
 	for i := 0; i == 0 || len(offers) == searchInterval; i += searchInterval {
 		resp, err := l.fetchOffersPage(query, i)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetchOffersPage in linkedIn.search: %v", err)
+			// If fetchOffersPage fails we return the accumulated offers so far.
+			return totalOffers, fmt.Errorf("failed to fetchOffersPage in linkedIn.search: %w", err)
 		}
 		offers, err = l.parseLinkedInBody(resp)
 		if err != nil {
@@ -78,32 +80,42 @@ func (l *linkedIn) fetchOffersPage(query *db.Query, start int) (io.ReadCloser, e
 	}
 	qp.Add(paramFTPR, fmt.Sprintf("r%d", ftpr))
 
-	// When creating new queries with a week of job offers we might hit LinkedIn's
-	// API rate limit. To avoid that we add a bit of a delay after the first http call.
-	if ftpr == oneWeekInSeconds && start != 0 {
-		time.Sleep(200 * time.Millisecond)
-	}
-
 	url, err := url.Parse(linkedInURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 	url.RawQuery = qp.Encode()
 
-	resp, err := l.client.Get(url.String())
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch URL: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		if isRetryable[resp.StatusCode] {
-			return nil, ErrRetryable
+	// Exponential backoff
+	var (
+		retry   = true
+		retries int
+		resp    = &http.Response{}
+		cErr    error
+	)
+
+	for retry {
+		resp, cErr = l.client.Get(url.String())
+		if cErr != nil {
+			return nil, fmt.Errorf("failed to fetch URL: %w", err)
 		}
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("unable to read response body: %w", err)
+		if resp.StatusCode != http.StatusOK {
+			if isRetryable[resp.StatusCode] {
+				if retries == maxRetries {
+					return nil, fmt.Errorf("%w with %w", ErrRetryable, err)
+				}
+				time.Sleep(time.Duration(retries * int(time.Second)))
+				retries++
+				continue
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("unable to read response body: %w", err)
+			}
+			defer resp.Body.Close()
+			return nil, fmt.Errorf("received status code: %d, message: %s", resp.StatusCode, string(body))
 		}
-		defer resp.Body.Close()
-		return nil, fmt.Errorf("received status code: %d, message: %s", resp.StatusCode, string(body))
+		retry = false
 	}
 	return resp.Body, nil
 }
@@ -140,18 +152,10 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 
 			// Extract Posted Date
 			postedAt, _ := s.Find("time").Attr("datetime")
-			t, err := time.Parse("2006-01-02", postedAt)
-			if err != nil {
-				l.logger.Error("unable to parse datetime for job ID ", job.ID, slog.String("error", err.Error()))
-			}
+			t, _ := time.Parse("2006-01-02", postedAt) //nolint: errcheck
 			job.PostedAt = pgtype.Timestamptz{Time: t, Valid: true}
 
-			// Only add if we have essential data
-			if job.ID != "" && job.Title != "" {
-				jobs = append(jobs, job)
-			} else {
-				l.logger.Error("Missing essential data for job ID", slog.String("jobID", job.ID))
-			}
+			jobs = append(jobs, job)
 		}
 	})
 
