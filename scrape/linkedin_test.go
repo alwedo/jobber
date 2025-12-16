@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"testing"
@@ -18,10 +17,7 @@ import (
 
 func TestFetchOffersPage(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{
-		client: &http.Client{Transport: mockResp},
-		logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
-	}
+	l := &linkedIn{&http.Client{Transport: mockResp}}
 
 	t.Run("first time query", func(t *testing.T) {
 		query := &db.Query{
@@ -139,7 +135,7 @@ func TestFetchOffersPage(t *testing.T) {
 }
 
 func TestParseLinkedInBody(t *testing.T) {
-	l := &linkedIn{logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))}
+	l := &linkedIn{}
 
 	file, err := os.Open("test_data/linkedin1.html")
 	if err != nil {
@@ -173,10 +169,7 @@ func TestParseLinkedInBody(t *testing.T) {
 
 func TestScrape(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{
-		client: &http.Client{Transport: mockResp},
-		logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{})),
-	}
+	l := &linkedIn{&http.Client{Transport: mockResp}}
 
 	t.Run("expected behaviour", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {

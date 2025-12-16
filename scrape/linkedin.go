@@ -28,14 +28,10 @@ const (
 
 type linkedIn struct {
 	client *http.Client
-	logger *slog.Logger
 }
 
 func LinkedIn(logger *slog.Logger) *linkedIn { //nolint: revive
-	return &linkedIn{
-		client: &http.Client{Timeout: 10 * time.Second},
-		logger: logger,
-	}
+	return &linkedIn{client: http.DefaultClient}
 }
 
 // search runs a linkedin search based on a query.
