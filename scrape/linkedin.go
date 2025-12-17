@@ -102,7 +102,6 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
-
 	url.RawQuery = qp.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
