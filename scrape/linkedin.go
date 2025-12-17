@@ -103,9 +103,7 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
 
-	// Go url.Encode() replaces spaces with '+' but LinkedIn expects '%20'
-	// Queries with '+' will not render any results.
-	url.RawQuery = strings.ReplaceAll(qp.Encode(), "+", "%20")
+	url.RawQuery = qp.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
