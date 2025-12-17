@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -31,10 +32,11 @@ const (
 
 type linkedIn struct {
 	client *http.Client
+	logger *slog.Logger
 }
 
-func LinkedIn() *linkedIn { //nolint: revive
-	return &linkedIn{client: http.DefaultClient}
+func LinkedIn(l *slog.Logger) *linkedIn { //nolint: revive
+	return &linkedIn{client: http.DefaultClient, logger: l}
 }
 
 // search runs a linkedin search based on a query.
@@ -100,7 +102,10 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse URL: %w", err)
 	}
-	url.RawQuery = qp.Encode()
+
+	// Go url.Encode() replaces spaces with '+' but LinkedIn expects '%20'
+	// Queries with '+' will not render any results.
+	url.RawQuery = strings.ReplaceAll(qp.Encode(), "+", "%20")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
@@ -111,9 +116,23 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 	var (
 		retry   = true
 		retries int
-		resp    = &http.Response{}
+		resp    *http.Response
 		cErr    error
 	)
+
+	defer func() {
+		l.logger.Debug(
+			"LinkedIn HTTP call",
+			slog.Int64("qID", query.ID),
+			slog.String("keywords", query.Keywords),
+			slog.String("location", query.Location),
+			slog.Group("details",
+				slog.String("URL", url.String()),
+				slog.Any("response code", resp.StatusCode),
+				slog.Int("total retries", retries),
+			),
+		)
+	}()
 
 	for retry {
 		resp, cErr = l.client.Do(req)
@@ -173,7 +192,10 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 
 			// Extract Posted Date
 			postedAt, _ := s.Find("time").Attr("datetime")
-			t, _ := time.Parse("2006-01-02", postedAt) //nolint: errcheck
+			t, err := time.Parse("2006-01-02", postedAt)
+			if err != nil {
+				l.logger.Error("unable to parse 'postedAt' time in scrape.LinkedIn", slog.Any("error", err))
+			}
 			job.PostedAt = pgtype.Timestamptz{Time: t, Valid: true}
 
 			jobs = append(jobs, job)
