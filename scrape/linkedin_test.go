@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -80,6 +81,21 @@ func TestFetchOffersPage(t *testing.T) {
 		gotFTPR := mockResp.req.URL.Query().Get(paramFTPR)
 		if gotFTPR != "r3600" {
 			t.Errorf("expected FT_PR to be 'r3600', got %s", gotFTPR)
+		}
+	})
+
+	t.Run("keywords field with spaces should get rendered with '%20' instead of '+'", func(t *testing.T) {
+		query := &db.Query{
+			Keywords: "golang with spaces",
+			Location: "the moon",
+		}
+		_, err := l.fetchOffersPage(ctx, query, 0)
+		if err != nil {
+			t.Errorf("error fetching offers: %s", err.Error())
+		}
+		want := "golang%20with%20spaces"
+		if !strings.Contains(mockResp.req.URL.String(), want) {
+			t.Errorf("wanted url to have %s, got %s", want, mockResp.req.URL.String())
 		}
 	})
 
