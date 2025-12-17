@@ -15,8 +15,15 @@
                     name="keywords"
                     placeholder="keywords, ie. barista"
                     required
+                    pattern="[A-Za-z0-9]+"
                 />
-                <input type="text" name="location" placeholder="location, ie. berlin" />
+                <input
+                    type="text"
+                    name="location"
+                    placeholder="location, ie. berlin"
+                    required
+                    pattern="[A-Za-z0-9]+"
+                />
                 <button type="submit">create RSS feed</button>
             </form>
         </div>
