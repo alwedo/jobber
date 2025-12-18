@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"testing"
@@ -18,7 +19,7 @@ import (
 
 func TestFetchOffersPage(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{&http.Client{Transport: mockResp}}
+	l := &linkedIn{&http.Client{Transport: mockResp}, slog.New(slog.NewJSONHandler(io.Discard, nil))}
 	ctx := context.Background()
 
 	t.Run("first time query", func(t *testing.T) {
@@ -171,7 +172,7 @@ func TestParseLinkedInBody(t *testing.T) {
 
 func TestScrape(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{&http.Client{Transport: mockResp}}
+	l := &linkedIn{&http.Client{Transport: mockResp}, slog.New(slog.NewJSONHandler(io.Discard, nil))}
 
 	t.Run("expected behaviour", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {

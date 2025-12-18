@@ -14,9 +14,16 @@
                     type="text"
                     name="keywords"
                     placeholder="keywords, ie. barista"
+                    pattern="[A-Za-z0-9]+"
                     required
-                />
-                <input type="text" name="location" placeholder="location, ie. berlin" />
+                    oninput="this.setCustomValidity(this.validity.patternMismatch ? 'only letters and numbers are allowed' : '')" />
+                <input
+                    type="text"
+                    name="location"
+                    placeholder="location, ie. berlin"
+                    pattern="[A-Za-z0-9]+"
+                    required
+                    oninput="this.setCustomValidity(this.validity.patternMismatch ? 'only letters and numbers are allowed' : '')" />
                 <button type="submit">create RSS feed</button>
             </form>
         </div>

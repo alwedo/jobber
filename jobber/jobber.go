@@ -31,7 +31,7 @@ type Jobber struct {
 }
 
 func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
-	return NewConfigurableJobber(log, db, scrape.LinkedIn())
+	return NewConfigurableJobber(log, db, scrape.LinkedIn(log))
 }
 
 func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (*Jobber, func()) {
@@ -92,12 +92,14 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	// After creating a new query we schedule it and run it immediately
 	// so the feed has initial data. In the frontend we use a spinner
 	// with htmx while this is being processed.
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 	o := []gocron.JobOption{
 		gocron.WithStartAt(gocron.WithStartImmediately()),
 		gocron.WithEventListeners(gocron.AfterJobRuns(func(uuid.UUID, string) {
-			done <- struct{}{}
-			defer close(done)
+			select {
+			case done <- struct{}{}:
+			default:
+			}
 		})),
 	}
 
