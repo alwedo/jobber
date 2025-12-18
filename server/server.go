@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -153,27 +154,41 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
 }
 
-// validateParams receives a list of params, validate they've
-// been supplied in the request and normalizes them.
-// If a param is missing, it will respond with 400.
+// Input validation regex.
+var re = regexp.MustCompile(`^[A-Za-z0-9]+$`)
+
+// validateParams receives a list of params, validate they've been supplied in the request and normalizes them.
+// If a param is missing or contains invalid characters, it will respond with 400.
 func validateParams(params []string, w http.ResponseWriter, r *http.Request) (url.Values, error) {
 	missing := []string{}
+	invalid := []string{}
 	valid := url.Values{}
 	for _, p := range params {
 		v := r.FormValue(p)
-		if v == "" {
+		switch {
+		case v == "":
 			missing = append(missing, p)
-			continue
+		case !re.MatchString(v):
+			invalid = append(invalid, p)
+		default:
+			valid.Add(p, strings.ToLower(strings.TrimSpace(v)))
 		}
-		valid.Add(p, strings.ToLower(strings.TrimSpace(v)))
 	}
-	if len(missing) != 0 {
+	if len(missing) != 0 || len(invalid) != 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		_, err := fmt.Fprintf(w, "missing params: %v", missing)
+		var errStr []string
+		if len(missing) != 0 {
+			errStr = append(errStr, fmt.Sprintf("missing params: %v ", missing))
+		}
+		if len(invalid) != 0 {
+			errStr = append(errStr, fmt.Sprintf("invalid params: %v, only [A-Za-z0-9] allowed", invalid))
+		}
+		_, err := fmt.Fprint(w, strings.Join(errStr, ", "))
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			return nil, fmt.Errorf("unable to write response in validateParams: %w", err)
 		}
-		return nil, fmt.Errorf("missing params: %v", missing)
+		return nil, fmt.Errorf("missing params in validateParams: %v", missing)
 	}
 	return valid, nil
 }

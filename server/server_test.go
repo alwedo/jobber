@@ -55,6 +55,35 @@ func TestServer(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
+			name:   "with incorrect param keywords",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: "golang-",
+				queryParamLocation: "berlin",
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:   "with incorrect param location",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: "golang",
+				queryParamLocation: "berlin&",
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:   "with missing param location",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: "golang",
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
 			name:   "valid feed",
 			path:   "/feeds",
 			method: http.MethodGet,
