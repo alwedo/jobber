@@ -155,7 +155,7 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 }
 
 // Input validation regex.
-var re = regexp.MustCompile(`^[A-Za-z0-9]+$`)
+var re = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
 
 // validateParams receives a list of params, validate they've been supplied in the request and normalizes them.
 // If a param is missing or contains invalid characters, it will respond with 400.
