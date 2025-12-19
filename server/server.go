@@ -96,7 +96,11 @@ func (s *server) create() http.HandlerFunc {
 			return
 		}
 
-		u, err := url.Parse("https://" + r.Host + "/feeds")
+		scheme := "https://"
+		if r.Host == "localhost" {
+			scheme = "http://"
+		}
+		u, err := url.Parse(scheme + r.Host + "/feeds")
 		if err != nil {
 			s.internalError(w, "failed to parse url in server.create", err)
 			return
@@ -116,6 +120,7 @@ type feedData struct {
 	Host     string
 	Offers   []*db.Offer
 	NotFound bool
+	Browser  bool
 }
 
 func (s *server) feed() http.HandlerFunc {
@@ -130,6 +135,16 @@ func (s *server) feed() http.HandlerFunc {
 			Location: params.Get(queryParamLocation),
 			Host:     r.Host,
 		}
+		// If the header has Accept="text/html" it means it's coming from a Browser.
+		// We set the browser option in request data to True so we
+		// render html instead of the expecte RSS XML.
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			d.Browser = true
+			w.Header().Add("Content-Type", "text/html")
+		} else {
+			w.Header().Add("Content-Type", "application/rss+xml")
+		}
+
 		offers, err := s.jobber.ListOffers(params.Get(queryParamKeywords), params.Get(queryParamLocation))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -141,7 +156,6 @@ func (s *server) feed() http.HandlerFunc {
 			}
 		}
 		d.Offers = offers
-		w.Header().Add("Content-Type", "application/rss+xml")
 		if err := s.templates.ExecuteTemplate(w, assetRSS, d); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
 			return

@@ -1,1 +1,10 @@
-<p>done!<br><button class="copy-button" onclick="copyToClipboard('{{.}}')">copy RSS feed</button> <button class="reset-button" onclick="resetForm()">create another RSS feed</button></p>
+<p>
+    done! your RSS link is:<br>
+    <i>{{.}}</i><br>
+
+    <button class="copy-button" onclick="copyToClipboard('{{.}}')">copy RSS feed</button>
+
+    <button type="button" onclick="window.open('{{.}}', '_blank', 'noopener')">open RSS feed</button>
+
+    <button class="reset-button" onclick="resetForm()">create another RSS feed</button>
+</p>
