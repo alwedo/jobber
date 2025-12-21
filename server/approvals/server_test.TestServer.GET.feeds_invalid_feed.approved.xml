@@ -3,13 +3,15 @@
 
 <channel>
   <title>feed not found :(</title>
-  <link>LINK_SCRUBBED</link>
-  <description>no feed has been found for fluffy dogs jobs in the moon</description>
+  <link>https://127.0.0.1:PORT_SCRUBBED</link>
+  <description
+        >no feed has been found for fluffy dogs jobs in the moon</description>
 
   <item>
   <title>no query has been found for fluffy dogs jobs in the moon</title>
-  <description><![CDATA[try creating a new feed <a href=HREF_SCRUBBED>here</a>]]></description>
-    <link>LINK_SCRUBBED</link>
+  <description
+            ><![CDATA[try creating a new feed <a href="/">here</a>]]></description>
+    <link>https://127.0.0.1:PORT_SCRUBBED</link>
     <pubDate>DATETIME_SCRUBBED</pubDate>
     <guid isPermaLink="false">1</guid>
   </item></channel>

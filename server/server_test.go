@@ -227,12 +227,10 @@ func TestServer(t *testing.T) {
 	}
 }
 
-// Scrubs dates, times and URLs
+// Scrubs dates, times and server ports
 func scroobbyDoobyDoo(s string) string {
-	s = regexp.MustCompile(`<a href="[^"]*"`).ReplaceAllString(s, `<a href=HREF_SCRUBBED`)
-	s = regexp.MustCompile(`<link>[^<]*</link>`).ReplaceAllString(s, `<link>LINK_SCRUBBED</link>`)
 	s = regexp.MustCompile(`<pubDate>[^<]*</pubDate>`).ReplaceAllString(s, `<pubDate>DATETIME_SCRUBBED</pubDate>`)
 	s = regexp.MustCompile(`\(posted [^)]*\)`).ReplaceAllString(s, `(posted POSTED_AT_SCRUBBED)`)
-	s = regexp.MustCompile(`127.0.0.1:[^)]*\/`).ReplaceAllString(s, `127.0.0.1:PORT_SCRUBBED/`)
+	s = regexp.MustCompile(`127\.0\.0\.1:\d+`).ReplaceAllString(s, `127.0.0.1:PORT_SCRUBBED`)
 	return s
 }
