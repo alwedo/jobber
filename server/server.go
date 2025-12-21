@@ -136,12 +136,12 @@ func (s *server) feed() http.HandlerFunc {
 			Host:     r.Host,
 		}
 		// If the header has Accept="text/html" it means it's coming from a Browser.
-		// We set the browser option in request data to True so we
-		// render html instead of the expecte RSS XML.
-		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		// We set Browser to true in in request data and render html instead of RSS XML.
+		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
+		case true:
 			d.Browser = true
 			w.Header().Add("Content-Type", "text/html")
-		} else {
+		default:
 			w.Header().Add("Content-Type", "application/rss+xml")
 		}
 
@@ -192,7 +192,7 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 		w.WriteHeader(http.StatusBadRequest)
 		var errStr []string
 		if len(missing) != 0 {
-			errStr = append(errStr, fmt.Sprintf("missing params: %v ", missing))
+			errStr = append(errStr, fmt.Sprintf("missing params: %v", missing))
 		}
 		if len(invalid) != 0 {
 			errStr = append(errStr, fmt.Sprintf("invalid params: %v, only [A-Za-z0-9] allowed", invalid))
