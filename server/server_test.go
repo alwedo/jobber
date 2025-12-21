@@ -139,6 +139,20 @@ func TestServer(t *testing.T) {
 			wantStatus:     http.StatusOK,
 			wantBodyAssert: "html",
 		},
+		{
+			name:           "index page",
+			path:           "/",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusOK,
+			wantBodyAssert: "html",
+		},
+		{
+			name:           "rando page",
+			path:           "/123",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusNotFound,
+			wantBodyString: "404 page not found\n",
+		},
 	}
 
 	client := http.DefaultClient

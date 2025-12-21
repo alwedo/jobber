@@ -1,0 +1,42 @@
+<p>
+    done! your RSS link is:<br>
+    <i>https://127.0.0.1:PORT_SCRUBBED/feeds?keywords=golang&location=berlin')">copy RSS feed</button>
+
+    <a href=HREF_SCRUBBED target="_blank" style="text-decoration: none;">
+        <button type="button">open RSS feed</button>
+    </a>
+
+    <a href=HREF_SCRUBBED>
+        <button type="button">create another RSS feed</button>
+    </a>
+
+    <script>
+        function copyToClipboard(url) {
+            navigator.clipboard
+                .writeText(url)
+                .then(() => {
+                    showCopyFeedback();
+                })
+                .catch((err) => {
+                    console.error("Failed to copy: ", err);
+                    showCopyFeedback("Failed to copy");
+                });
+        }
+
+        function showCopyFeedback(message = "Copied!") {
+            let feedback = document.querySelector(".copy-feedback");
+            if (!feedback) {
+                feedback = document.createElement("div");
+                feedback.className = "copy-feedback";
+                document
+                    .querySelector(".copy-button")
+                    .parentNode.appendChild(feedback);
+            }
+            feedback.textContent = message;
+            feedback.classList.add("show");
+            setTimeout(() => {
+                feedback.classList.remove("show");
+            }, 2000);
+        }
+    </script>
+</p>
