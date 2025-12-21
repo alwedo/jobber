@@ -29,7 +29,8 @@ const (
 	assetsGlob          = "assets/*"
 	assetIndex          = "index.gohtml"
 	assetHelp           = "help.gohtml"
-	assetRSS            = "rss.goxml"
+	assetFeedRSS        = "feed_rss.goxml"
+	assetFeedHTML       = "feed_html.gohtml"
 	assetCreateResponse = "create_response.gohtml"
 )
 
@@ -120,7 +121,6 @@ type feedData struct {
 	Host     string
 	Offers   []*db.Offer
 	NotFound bool
-	Browser  bool
 }
 
 func (s *server) feed() http.HandlerFunc {
@@ -135,16 +135,6 @@ func (s *server) feed() http.HandlerFunc {
 			Location: params.Get(queryParamLocation),
 			Host:     r.Host,
 		}
-		// If the header has Accept="text/html" it means it's coming from a Browser.
-		// We set Browser to true in in request data and render html instead of RSS XML.
-		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
-		case true:
-			d.Browser = true
-			w.Header().Add("Content-Type", "text/html")
-		default:
-			w.Header().Add("Content-Type", "application/rss+xml")
-		}
-
 		offers, err := s.jobber.ListOffers(params.Get(queryParamKeywords), params.Get(queryParamLocation))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -156,7 +146,17 @@ func (s *server) feed() http.HandlerFunc {
 			}
 		}
 		d.Offers = offers
-		if err := s.templates.ExecuteTemplate(w, assetRSS, d); err != nil {
+
+		tmpl := assetFeedRSS
+		// If the header has Accept="text/html" it means it's coming from a Browser.
+		// We set the template to assetFeedHTML and render html instead of RSS XML.
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			tmpl = assetFeedHTML
+			w.Header().Add("Content-Type", "text/html")
+		} else {
+			w.Header().Add("Content-Type", "application/rss+xml")
+		}
+		if err := s.templates.ExecuteTemplate(w, tmpl, d); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
 			return
 		}
@@ -214,6 +214,9 @@ var funcMap = template.FuncMap{
 	"title": func(o *db.Offer) string {
 		t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Time.Format("Jan 2"))
 		return html.EscapeString(t)
+	},
+	"postedAt": func(o *db.Offer) string {
+		return o.PostedAt.Time.Format("Jan 2")
 	},
 	"now": func() string {
 		return time.Now().Format(time.RFC1123Z)

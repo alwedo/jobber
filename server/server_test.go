@@ -31,6 +31,7 @@ func TestServer(t *testing.T) {
 		path           string
 		method         string
 		params         map[string]string
+		headers        map[string]string
 		wantStatus     int
 		wantHeaders    map[string]string
 		wantBodyAssert string // takes the extension of the file you want to assert, ie. "html" or "xml"
@@ -100,7 +101,7 @@ func TestServer(t *testing.T) {
 			wantBodyString: "missing params: [keywords], invalid params: [location], only [A-Za-z0-9] allowed",
 		},
 		{
-			name:   "valid feed",
+			name:   "valid XML feed",
 			path:   "/feeds",
 			method: http.MethodGet,
 			params: map[string]string{
@@ -111,6 +112,20 @@ func TestServer(t *testing.T) {
 			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
 			wantBodyAssert: "xml",
 		},
+		{
+			name:   "valid HTML feed",
+			path:   "/feeds",
+			method: http.MethodGet,
+			params: map[string]string{
+				queryParamKeywords: "golang",
+				queryParamLocation: "berlin",
+			},
+			headers:        map[string]string{"Accept": "text/html"},
+			wantStatus:     http.StatusOK,
+			wantHeaders:    map[string]string{"Content-Type": "text/html"},
+			wantBodyAssert: "html",
+		},
+
 		{
 			name:   "invalid feed", // Returns a valid xml with a single post with instructions.
 			path:   "/feeds",
@@ -173,6 +188,11 @@ func TestServer(t *testing.T) {
 			req, err := http.NewRequest(tt.method, url.String(), nil)
 			if err != nil {
 				t.Errorf("unable to create http request: %v", err)
+			}
+			if tt.headers != nil {
+				for k, v := range tt.headers {
+					req.Header.Add(k, v)
+				}
 			}
 			r, err := client.Do(req)
 			if err != nil {
