@@ -8,9 +8,9 @@
         >no feed has been found for {{.Keywords}} jobs in {{.Location}}</description>
 
   <item>
-  <title>no query has been found for {{.Keywords}} jobs in {{.Location}}</title>
+  <title>no feed has been found for {{.Keywords}} jobs in {{.Location}}</title>
   <description
-            ><![CDATA[try creating a new feed <a href="/">here</a>]]></description>
+            ><![CDATA[try creating a new job search feed <a href="/">here</a>]]></description>
     <link>https://{{.Host}}</link>
     <pubDate>{{now}}</pubDate>
     <guid isPermaLink="false">1</guid>

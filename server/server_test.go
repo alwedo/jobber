@@ -113,6 +113,18 @@ func TestServer(t *testing.T) {
 			wantBodyAssert: "xml",
 		},
 		{
+			name:   "invalid XML feed", // Returns a valid xml with a single post with instructions.
+			path:   "/feeds",
+			method: http.MethodGet,
+			params: map[string]string{
+				queryParamKeywords: "fluffy dogs",
+				queryParamLocation: "the moon",
+			},
+			wantStatus:     http.StatusOK,
+			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
+			wantBodyAssert: "xml",
+		},
+		{
 			name:   "valid HTML feed",
 			path:   "/feeds",
 			method: http.MethodGet,
@@ -125,18 +137,18 @@ func TestServer(t *testing.T) {
 			wantHeaders:    map[string]string{"Content-Type": "text/html"},
 			wantBodyAssert: "html",
 		},
-
 		{
-			name:   "invalid feed", // Returns a valid xml with a single post with instructions.
+			name:   "invalid HTML feed", // Returns a valid html with instructions.
 			path:   "/feeds",
 			method: http.MethodGet,
 			params: map[string]string{
 				queryParamKeywords: "fluffy dogs",
 				queryParamLocation: "the moon",
 			},
+			headers:        map[string]string{"Accept": "text/html"},
 			wantStatus:     http.StatusOK,
-			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
-			wantBodyAssert: "xml",
+			wantHeaders:    map[string]string{"Content-Type": "text/html"},
+			wantBodyAssert: "html",
 		},
 		{
 			name:   "with missing param keywords",

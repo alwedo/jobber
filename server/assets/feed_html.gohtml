@@ -1,5 +1,9 @@
 {{template "top" .}}
-<main>
+<main>{{ if .NotFound }}
+    <p style="text-align: center">no feed has been found for <b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br>
+        try creating a new job search feed <a href="/">here</a>
+    </p>
+    {{ else }}
     <style>
     table {
       border-collapse: collapse;
@@ -42,6 +46,6 @@
         <td><a href=https://www.linkedin.com/jobs/view/{{.ID}} target="_blank">LinkedIn</a></td>
       </tr>
       {{ end }}
-    </table>
+    </table>{{ end }}
 </main>
 {{template "bottom" .}}
