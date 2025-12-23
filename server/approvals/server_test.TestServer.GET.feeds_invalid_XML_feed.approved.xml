@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+
+<channel>
+  <title>feed not found :(</title>
+  <link>https://127.0.0.1:PORT_SCRUBBED</link>
+  <description
+        >no feed has been found for fluffy dogs jobs in the moon</description>
+
+  <item>
+  <title>no feed has been found for fluffy dogs jobs in the moon</title>
+  <description
+            ><![CDATA[try creating a new job search feed <a href="/">here</a>]]></description>
+    <link>https://127.0.0.1:PORT_SCRUBBED</link>
+    <pubDate>DATETIME_SCRUBBED</pubDate>
+    <guid isPermaLink="false">1</guid>
+  </item></channel>
+</rss>

@@ -1,0 +1,51 @@
+{{template "top" .}}
+<main>{{ if .NotFound }}
+    <p style="text-align: center">no feed has been found for <b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br>
+        try creating a new job search feed <a href="/">here</a>
+    </p>
+    {{ else }}
+    <style>
+    table {
+      border-collapse: collapse;
+      table-layout: auto
+    }
+
+    .center {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    td, th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+      white-space: nowrap;
+    }
+
+    tr:nth-child(even) {
+      background-color: #dddddd;
+    }
+
+    th, td {
+       width: auto;
+     }
+    </style>
+    <p style="text-align: center"><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br></p>
+    <table class="center">
+      <tr>
+        <th>Title</th>
+        <th>Company</th>
+        <th>Posted</th>
+        <th>Source</th>
+      </tr>
+      {{ range .Offers }}
+      <tr>
+        <td>{{ .Title }}</td>
+        <td>{{ .Company }}</td>
+        <td>{{ postedAt .}}</td>
+        <td><a href=https://www.linkedin.com/jobs/view/{{.ID}} target="_blank">LinkedIn</a></td>
+      </tr>
+      {{ end }}
+    </table>{{ end }}
+</main>
+{{template "bottom" .}}

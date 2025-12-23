@@ -27,13 +27,15 @@ func TestServer(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		path        string
-		method      string
-		params      map[string]string
-		wantStatus  int
-		wantHeaders map[string]string
-		wantBody    string
+		name           string
+		path           string
+		method         string
+		params         map[string]string
+		headers        map[string]string
+		wantStatus     int
+		wantHeaders    map[string]string
+		wantBodyAssert string // takes the extension of the file you want to assert, ie. "html" or "xml"
+		wantBodyString string
 	}{
 		{
 			name:   "with correct values",
@@ -43,7 +45,8 @@ func TestServer(t *testing.T) {
 				queryParamKeywords: "golang",
 				queryParamLocation: "berlin",
 			},
-			wantStatus: http.StatusOK,
+			wantStatus:     http.StatusOK,
+			wantBodyAssert: "html",
 		},
 		{
 			name:   "with missing param keywords",
@@ -52,7 +55,8 @@ func TestServer(t *testing.T) {
 			params: map[string]string{
 				queryParamLocation: "berlin",
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus:     http.StatusBadRequest,
+			wantBodyString: "missing params: [keywords]",
 		},
 		{
 			name:   "with incorrect param keywords",
@@ -62,7 +66,8 @@ func TestServer(t *testing.T) {
 				queryParamKeywords: "golang-",
 				queryParamLocation: "berlin",
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus:     http.StatusBadRequest,
+			wantBodyString: "invalid params: [keywords], only [A-Za-z0-9] allowed",
 		},
 		{
 			name:   "with incorrect param location",
@@ -72,7 +77,8 @@ func TestServer(t *testing.T) {
 				queryParamKeywords: "golang",
 				queryParamLocation: "berlin&",
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus:     http.StatusBadRequest,
+			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed",
 		},
 		{
 			name:   "with missing param location",
@@ -81,31 +87,68 @@ func TestServer(t *testing.T) {
 			params: map[string]string{
 				queryParamKeywords: "golang",
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus:     http.StatusBadRequest,
+			wantBodyString: "missing params: [location]",
 		},
 		{
-			name:   "valid feed",
+			name:   "with missing param keywords and incorrect param location",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamLocation: "the-moon",
+			},
+			wantStatus:     http.StatusBadRequest,
+			wantBodyString: "missing params: [keywords], invalid params: [location], only [A-Za-z0-9] allowed",
+		},
+		{
+			name:   "valid XML feed",
 			path:   "/feeds",
 			method: http.MethodGet,
 			params: map[string]string{
 				queryParamKeywords: "golang",
 				queryParamLocation: "berlin",
 			},
-			wantStatus:  http.StatusOK,
-			wantHeaders: map[string]string{"Content-Type": "application/rss+xml"},
-			wantBody:    "xml",
+			wantStatus:     http.StatusOK,
+			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
+			wantBodyAssert: "xml",
 		},
 		{
-			name:   "invalid feed", // Returns a valid xml with a single post with instructions.
+			name:   "invalid XML feed", // Returns a valid xml with a single post with instructions.
 			path:   "/feeds",
 			method: http.MethodGet,
 			params: map[string]string{
 				queryParamKeywords: "fluffy dogs",
 				queryParamLocation: "the moon",
 			},
-			wantStatus:  http.StatusOK,
-			wantHeaders: map[string]string{"Content-Type": "application/rss+xml"},
-			wantBody:    "xml",
+			wantStatus:     http.StatusOK,
+			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
+			wantBodyAssert: "xml",
+		},
+		{
+			name:   "valid HTML feed",
+			path:   "/feeds",
+			method: http.MethodGet,
+			params: map[string]string{
+				queryParamKeywords: "golang",
+				queryParamLocation: "berlin",
+			},
+			headers:        map[string]string{"Accept": "text/html"},
+			wantStatus:     http.StatusOK,
+			wantHeaders:    map[string]string{"Content-Type": "text/html"},
+			wantBodyAssert: "html",
+		},
+		{
+			name:   "invalid HTML feed", // Returns a valid html with instructions.
+			path:   "/feeds",
+			method: http.MethodGet,
+			params: map[string]string{
+				queryParamKeywords: "fluffy dogs",
+				queryParamLocation: "the moon",
+			},
+			headers:        map[string]string{"Accept": "text/html"},
+			wantStatus:     http.StatusOK,
+			wantHeaders:    map[string]string{"Content-Type": "text/html"},
+			wantBodyAssert: "html",
 		},
 		{
 			name:   "with missing param keywords",
@@ -117,11 +160,25 @@ func TestServer(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name:       "help page",
-			path:       "/help",
-			method:     http.MethodGet,
-			wantStatus: http.StatusOK,
-			wantBody:   "html",
+			name:           "help page",
+			path:           "/help",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusOK,
+			wantBodyAssert: "html",
+		},
+		{
+			name:           "index page",
+			path:           "/",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusOK,
+			wantBodyAssert: "html",
+		},
+		{
+			name:           "rando page",
+			path:           "/123",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusNotFound,
+			wantBodyString: "404 page not found\n",
 		},
 	}
 
@@ -144,6 +201,11 @@ func TestServer(t *testing.T) {
 			if err != nil {
 				t.Errorf("unable to create http request: %v", err)
 			}
+			if tt.headers != nil {
+				for k, v := range tt.headers {
+					req.Header.Add(k, v)
+				}
+			}
 			r, err := client.Do(req)
 			if err != nil {
 				t.Errorf("unable to perform httop request, %v", err)
@@ -160,24 +222,28 @@ func TestServer(t *testing.T) {
 					}
 				}
 			}
-			if tt.wantBody != "" {
-				body, err := io.ReadAll(r.Body)
-				if err != nil {
-					t.Errorf("unable to read response body: %v", err)
-				}
-				// Scrubbing date and times.
-				scrubber := func(s string) string {
-					s = regexp.MustCompile(`<a href="[^"]*"`).ReplaceAllString(s, `<a href=HREF_SCRUBBED`)
-					s = regexp.MustCompile(`<link>[^<]*</link>`).ReplaceAllString(s, `<link>LINK_SCRUBBED</link>`)
-					s = regexp.MustCompile(`<pubDate>[^<]*</pubDate>`).ReplaceAllString(s, `<pubDate>DATETIME_SCRUBBED</pubDate>`)
-					s = regexp.MustCompile(`\(posted [^)]*\)`).ReplaceAllString(s, `(posted POSTED_AT_SCRUBBED)`)
-					return s
-				}
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Errorf("unable to read response body: %v", err)
+			}
+			if tt.wantBodyAssert != "" {
 				approvals.UseFolder("approvals")
 				approvals.VerifyString(t, string(body),
-					approvals.Options().ForFile().WithExtension(tt.wantBody).WithScrubber(scrubber),
+					approvals.Options().ForFile().WithExtension(tt.wantBodyAssert).WithScrubber(scroobbyDoobyDoo),
 				)
+			}
+			if tt.wantBodyString != "" && tt.wantBodyString != string(body) {
+				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(body))
 			}
 		})
 	}
+}
+
+// Scrubs dates, times and server ports
+func scroobbyDoobyDoo(s string) string {
+	s = regexp.MustCompile(`<pubDate>[^<]*</pubDate>`).ReplaceAllString(s, `<pubDate>DATETIME_SCRUBBED</pubDate>`)
+	s = regexp.MustCompile(`\(posted [^)]*\)`).ReplaceAllString(s, `(posted POSTED_AT_SCRUBBED)`)
+	s = regexp.MustCompile(`<td>\s*[A-Za-z]{3}\s+\d{1,2}\s*</td>`).ReplaceAllString(s, `<td>DATE_SCRUBBED</td>`)
+	s = regexp.MustCompile(`127\.0\.0\.1:\d+`).ReplaceAllString(s, `127.0.0.1:PORT_SCRUBBED`)
+	return s
 }

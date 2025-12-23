@@ -3,12 +3,12 @@
 
 <channel>
   <title>golang jobs in berlin</title>
-  <link>LINK_SCRUBBED</link>
+  <link>https://127.0.0.1:PORT_SCRUBBED</link>
   <description>golang jobs in berlin</description>
   
   <item>
     <title>Junior Golang Dweeb at Späti GmbH (posted POSTED_AT_SCRUBBED)</title>
-    <link>LINK_SCRUBBED</link>
+    <link>https://www.linkedin.com/jobs/view/existing_offer</link>
     <pubDate>DATETIME_SCRUBBED</pubDate>
     <guid isPermaLink="false">existing_offer</guid>
   </item>
