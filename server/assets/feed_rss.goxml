@@ -22,6 +22,14 @@
   <item>
     <title>{{title .}}</title>
     <link>https://www.linkedin.com/jobs/view/{{.ID}}</link>
+    <description
+            ><![CDATA[
+            <b>Title</b>: {{ .Title }}<br>
+            <b>Company</b>: {{ .Company }}<br>
+            <b>Location</b>: {{ .Location }}<br>
+            <b>Posted</b>: {{ postedAt . }}<br>
+            <b>Source</b>: <a href=https://www.linkedin.com/jobs/view/{{.ID}} target="_blank">LinkedIn</a>
+            ]]></description>
     <pubDate>{{createdAt .}}</pubDate>
     <guid isPermaLink="false">{{.ID}}</guid>
   </item>

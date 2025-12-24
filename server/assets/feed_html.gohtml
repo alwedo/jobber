@@ -35,6 +35,7 @@
       <tr>
         <th>Title</th>
         <th>Company</th>
+        <th>Location</th>
         <th>Posted</th>
         <th>Source</th>
       </tr>
@@ -42,6 +43,7 @@
       <tr>
         <td>{{ .Title }}</td>
         <td>{{ .Company }}</td>
+        <td>{{ .Location }}</td>
         <td>{{ postedAt .}}</td>
         <td><a href=https://www.linkedin.com/jobs/view/{{.ID}} target="_blank">LinkedIn</a></td>
       </tr>
