@@ -18,11 +18,24 @@ Check it out! [rssjobs.app](https://rssjobs.app/)
 
 <sup>*</sup> _jobber scrapes only publicly available information_
 
-## Setting up the project locally
+## Starting up the project locally
 
 Make sure you have [go](https://go.dev/doc/install), [Docker](https://docs.docker.com/engine/install/) and [golang-migrate](https://github.com/golang-migrate/migrate/tree/master/cmd/migrate) installed.
 
 - (optional) Run test and lint with `make check`
-- Build the server with `make init`
 
-Once up, try `http://localhost:80` for your local version of jobber, or go to the Grafana dashboard with `http://localhost:3000/dashboards`.
+### Production mode
+
+This will build the db, the server and all the M&O infrastructure in Docker.
+
+- Start production mode with `make build`
+
+Once up, try `http://localhost` for your local version of jobber, or go to the Grafana dashboard with `http://localhost:3000/dashboards`.
+
+### Developer mode
+
+This will create only the DB container and run the server without building it.
+
+- Start developer mode with `make run`
+
+Once up, try `http://localhost` for your local dev version of jobber.
