@@ -29,7 +29,9 @@ build: migrate-up
 .PHONY: db-up
 db-up:
 	@{ \
-		if ! docker ps --format '{{.Names}}' | grep -q '^jobber-postgres-dev$$'; then \
+		if docker ps -a --format '{{.Names}}' | grep -q '^jobber-postgres-dev$$'; then \
+		    docker start jobber-postgres-dev; \
+		else \
 			docker run --name jobber-postgres-dev \
 				-e POSTGRES_DB=jobber \
 				-e POSTGRES_USER=jobber \
@@ -57,6 +59,12 @@ db-up:
 	}
 
 .PHONY: run
-run: db-up migrate-up
+run: db-up mod migrate-up
 	@echo "Starting server..."
-	@POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) go run main.go
+	@POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) go run main.go; \
+	exit 0
+
+.PHONY: mod
+mod:
+	@echo "Getting dependencies..."
+	@go mod download
