@@ -168,6 +168,12 @@ func TestParseLinkedInBody(t *testing.T) {
 	if jobs[0].PostedAt.Time.Format("2006-01-02") != "2025-11-13" {
 		t.Errorf("expected job posted at time %v, got %v", "2025-11-13", jobs[0].PostedAt.Time.Format("2006-01-02"))
 	}
+	if jobs[0].Source != "LinkedIn" {
+		t.Errorf("expected source to be LinkedIn, got %s", jobs[0].Source)
+	}
+	if jobs[0].Description != "" { // LinkedIn offers have no description in the list.
+		t.Errorf("expected description to be empty, got %s", jobs[0].Description)
+	}
 }
 
 func TestScrape(t *testing.T) {

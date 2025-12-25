@@ -170,7 +170,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 	doc.Find("li").Each(func(_ int, s *goquery.Selection) {
 		// Check if this li contains a job card
 		if s.Find(".base-search-card").Length() > 0 {
-			job := db.CreateOfferParams{}
+			job := db.CreateOfferParams{Source: linkedInName}
 
 			// Extract Job ID from data-entity-urn
 			if urn, exists := s.Find("[data-entity-urn]").Attr("data-entity-urn"); exists {
