@@ -12,17 +12,19 @@ import (
 )
 
 const createOffer = `-- name: CreateOffer :exec
-INSERT INTO offers (id, title, company, location, posted_at)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO offers (id, title, company, location, posted_at, description, source)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (id) DO NOTHING
 `
 
 type CreateOfferParams struct {
-	ID       string
-	Title    string
-	Company  string
-	Location string
-	PostedAt pgtype.Timestamptz
+	ID          string
+	Title       string
+	Company     string
+	Location    string
+	PostedAt    pgtype.Timestamptz
+	Description string
+	Source      string
 }
 
 func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error {
@@ -32,6 +34,8 @@ func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error
 		arg.Company,
 		arg.Location,
 		arg.PostedAt,
+		arg.Description,
+		arg.Source,
 	)
 	return err
 }
