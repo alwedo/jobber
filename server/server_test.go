@@ -244,6 +244,7 @@ func scroobbyDoobyDoo(s string) string {
 	s = regexp.MustCompile(`<pubDate>[^<]*</pubDate>`).ReplaceAllString(s, `<pubDate>DATETIME_SCRUBBED</pubDate>`)
 	s = regexp.MustCompile(`\(posted [^)]*\)`).ReplaceAllString(s, `(posted POSTED_AT_SCRUBBED)`)
 	s = regexp.MustCompile(`<td>\s*[A-Za-z]{3}\s+\d{1,2}\s*</td>`).ReplaceAllString(s, `<td>DATE_SCRUBBED</td>`)
+	s = regexp.MustCompile(`<b>Posted</b>:\s*[A-Za-z]{3}\s+\d{1,2}<br>`).ReplaceAllString(s, `<b>Posted</b>: DATE_SCRUBBED<br>`)
 	s = regexp.MustCompile(`127\.0\.0\.1:\d+`).ReplaceAllString(s, `127.0.0.1:PORT_SCRUBBED`)
 	return s
 }
