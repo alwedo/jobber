@@ -1,0 +1,3 @@
+ALTER TABLE offers
+DROP COLUMN IF EXISTS source,
+DROP COLUMN IF EXISTS description;

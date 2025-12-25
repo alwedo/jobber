@@ -9,12 +9,14 @@ import (
 )
 
 type Offer struct {
-	ID        string
-	Title     string
-	Company   string
-	Location  string
-	PostedAt  pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
+	ID          string
+	Title       string
+	Company     string
+	Location    string
+	PostedAt    pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamptz
+	Source      string
+	Description string
 }
 
 type Query struct {

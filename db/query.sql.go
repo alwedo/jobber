@@ -153,7 +153,7 @@ func (q *Queries) GetQueryByID(ctx context.Context, id int64) (*Query, error) {
 
 const listOffers = `-- name: ListOffers :many
 SELECT
-    o.id, o.title, o.company, o.location, o.posted_at, o.created_at
+    o.id, o.title, o.company, o.location, o.posted_at, o.created_at, o.source, o.description
 FROM
     queries q
     JOIN query_offers qo ON q.id = qo.query_id
@@ -180,6 +180,8 @@ func (q *Queries) ListOffers(ctx context.Context, id int64) ([]*Offer, error) {
 			&i.Location,
 			&i.PostedAt,
 			&i.CreatedAt,
+			&i.Source,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
