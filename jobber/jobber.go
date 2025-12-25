@@ -16,6 +16,8 @@ import (
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/scrape"
+	"github.com/alwedo/jobber/scrape/linkedin"
+	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
@@ -31,7 +33,7 @@ type Jobber struct {
 }
 
 func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
-	return NewConfigurableJobber(log, db, scrape.LinkedIn(log))
+	return NewConfigurableJobber(log, db, linkedin.LinkedIn(log))
 }
 
 func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (*Jobber, func()) {
@@ -153,7 +155,7 @@ func (j *Jobber) runQuery(qID int64) {
 
 	offers, err := j.scpr.Scrape(j.ctx, q)
 	if err != nil {
-		if errors.Is(err, scrape.ErrRetryable) {
+		if errors.Is(err, retryhttp.ErrRetryable) {
 			// Retryable errors still bring data. We log a warning for further analysis and continue.
 			j.logger.Warn("exhausted retries in jobber.runQuery", slog.Int64("queryID", q.ID), slog.Any("error", err))
 		} else {

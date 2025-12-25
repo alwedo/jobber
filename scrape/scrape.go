@@ -5,26 +5,12 @@ package scrape
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/alwedo/jobber/db"
 )
 
 type Scraper interface {
 	Scrape(context.Context, *db.Query) ([]db.CreateOfferParams, error)
-}
-
-var ErrRetryable = errors.New("scrape: retryable error")
-
-var isRetryable = map[int]bool{
-	http.StatusRequestTimeout:      true,
-	http.StatusTooEarly:            true,
-	http.StatusTooManyRequests:     true,
-	http.StatusInternalServerError: true,
-	http.StatusBadGateway:          true,
-	http.StatusServiceUnavailable:  true,
-	http.StatusGatewayTimeout:      true,
 }
 
 type mockScraper struct {
