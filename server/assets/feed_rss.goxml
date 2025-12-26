@@ -28,7 +28,7 @@
             <b>Company</b>: {{ .Company }}<br>
             <b>Location</b>: {{ .Location }}<br>
             <b>Posted</b>: {{ postedAt . }}<br>
-            <b>Source</b>: <a href=https://www.linkedin.com/jobs/view/{{.ID}} target="_blank">LinkedIn</a>
+            <b>Source</b>: <a href={{.Url}} target="_blank">{{.Source}}</a>
             ]]></description>
     <pubDate>{{createdAt .}}</pubDate>
     <guid isPermaLink="false">{{.ID}}</guid>
