@@ -156,6 +156,9 @@ func TestParseLinkedInBody(t *testing.T) {
 	if jobs[0].ID != "4322119156" {
 		t.Errorf("expected job ID 4322119156, got %s", jobs[0].ID)
 	}
+	if jobs[0].Url != "https://www.linkedin.com/jobs/view/4322119156" {
+		t.Errorf("expected url to be https://www.linkedin.com/jobs/view/4322119156, got %s", jobs[0].Url)
+	}
 	if jobs[0].Title != "Software Engineer (Golang)" {
 		t.Errorf("expected job title 'Software Engineer (Golang)', got '%s'", jobs[0].Title)
 	}
@@ -167,6 +170,12 @@ func TestParseLinkedInBody(t *testing.T) {
 	}
 	if jobs[0].PostedAt.Time.Format("2006-01-02") != "2025-11-13" {
 		t.Errorf("expected job posted at time %v, got %v", "2025-11-13", jobs[0].PostedAt.Time.Format("2006-01-02"))
+	}
+	if jobs[0].Source != "LinkedIn" {
+		t.Errorf("expected source to be LinkedIn, got %s", jobs[0].Source)
+	}
+	if jobs[0].Description != "" { // LinkedIn offers have no description in the list.
+		t.Errorf("expected description to be empty, got %s", jobs[0].Description)
 	}
 }
 

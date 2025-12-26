@@ -45,7 +45,7 @@
         <td>{{ .Company }}</td>
         <td>{{ .Location }}</td>
         <td>{{ postedAt .}}</td>
-        <td><a href=https://www.linkedin.com/jobs/view/{{.ID}} target="_blank">LinkedIn</a></td>
+        <td><a href={{.Url}} target="_blank">{{.Source}}</a></td>
       </tr>
       {{ end }}
     </table>{{ end }}
