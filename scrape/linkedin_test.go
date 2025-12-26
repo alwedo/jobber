@@ -156,6 +156,9 @@ func TestParseLinkedInBody(t *testing.T) {
 	if jobs[0].ID != "4322119156" {
 		t.Errorf("expected job ID 4322119156, got %s", jobs[0].ID)
 	}
+	if jobs[0].Url != "https://www.linkedin.com/jobs/view/4322119156" {
+		t.Errorf("expected url to be https://www.linkedin.com/jobs/view/4322119156, got %s", jobs[0].Url)
+	}
 	if jobs[0].Title != "Software Engineer (Golang)" {
 		t.Errorf("expected job title 'Software Engineer (Golang)', got '%s'", jobs[0].Title)
 	}

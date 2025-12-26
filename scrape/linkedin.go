@@ -19,6 +19,7 @@ import (
 
 const (
 	linkedInURL      = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+	linkedInBaseURL  = "https://www.linkedin.com/jobs/view/" // Direct link to job posting
 	linkedInName     = "LinkedIn"
 	paramKeywords    = "keywords" // Search keywords, ie. "golang"
 	paramLocation    = "location" // Location of the search, ie. "Berlin"
@@ -177,6 +178,9 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 				id := strings.Split(urn, ":")
 				job.ID = id[len(id)-1]
 			}
+
+			// Construct direct link to job posting
+			job.Url = linkedInBaseURL + job.ID
 
 			// Extract Title
 			job.Title = normalize(s.Find(".base-search-card__title").Text())
