@@ -12,8 +12,8 @@ import (
 )
 
 const createOffer = `-- name: CreateOffer :exec
-INSERT INTO offers (id, title, company, location, posted_at, description, source)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO offers (id, title, company, location, posted_at, description, source, url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO NOTHING
 `
 
@@ -25,6 +25,7 @@ type CreateOfferParams struct {
 	PostedAt    pgtype.Timestamptz
 	Description string
 	Source      string
+	Url         string
 }
 
 func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error {
@@ -36,6 +37,7 @@ func (q *Queries) CreateOffer(ctx context.Context, arg *CreateOfferParams) error
 		arg.PostedAt,
 		arg.Description,
 		arg.Source,
+		arg.Url,
 	)
 	return err
 }
@@ -157,7 +159,7 @@ func (q *Queries) GetQueryByID(ctx context.Context, id int64) (*Query, error) {
 
 const listOffers = `-- name: ListOffers :many
 SELECT
-    o.id, o.title, o.company, o.location, o.posted_at, o.created_at, o.source, o.description
+    o.id, o.title, o.company, o.location, o.posted_at, o.created_at, o.source, o.url, o.description
 FROM
     queries q
     JOIN query_offers qo ON q.id = qo.query_id
@@ -185,6 +187,7 @@ func (q *Queries) ListOffers(ctx context.Context, id int64) ([]*Offer, error) {
 			&i.PostedAt,
 			&i.CreatedAt,
 			&i.Source,
+			&i.Url,
 			&i.Description,
 		); err != nil {
 			return nil, err

@@ -19,9 +19,9 @@ INSERT INTO queries (keywords, location, queried_at) VALUES
 ('data scientist', 'new york', CURRENT_TIMESTAMP),
 ('golang', 'berlin', CURRENT_TIMESTAMP),
 ('retry', 'berlin', CURRENT_TIMESTAMP);
-INSERT INTO offers (id, title, company, location, posted_at, description, source) VALUES
-('offer_001', 'Senior Python Developer', 'TechCorp Inc', 'San Francisco, CA', CURRENT_TIMESTAMP - INTERVAL '8 days', '', 'LinkedIn'),
-('existing_offer', 'Junior Golang Dweeb', 'Späti GmbH', 'Berlin', CURRENT_TIMESTAMP, '', 'LinkedIn');
+INSERT INTO offers (id, title, company, location, posted_at, description, source, url) VALUES
+('offer_001', 'Senior Python Developer', 'TechCorp Inc', 'San Francisco, CA', CURRENT_TIMESTAMP - INTERVAL '8 days', '', 'LinkedIn', ''),
+('existing_offer', 'Junior Golang Dweeb', 'Späti GmbH', 'Berlin', CURRENT_TIMESTAMP, '', 'LinkedIn', 'https://www.linkedin.com/jobs/view/existing_offer');
 INSERT INTO query_offers (query_id, offer_id) VALUES
 (1, 'offer_001'),
 (3, 'existing_offer'),

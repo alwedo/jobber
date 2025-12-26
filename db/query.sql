@@ -47,8 +47,8 @@ WHERE
     id = $1;
 
 -- name: CreateOffer :exec
-INSERT INTO offers (id, title, company, location, posted_at, description, source)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO offers (id, title, company, location, posted_at, description, source, url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO NOTHING;
 
 -- name: ListOffers :many

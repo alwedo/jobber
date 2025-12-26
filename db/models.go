@@ -16,6 +16,7 @@ type Offer struct {
 	PostedAt    pgtype.Timestamptz
 	CreatedAt   pgtype.Timestamptz
 	Source      string
+	Url         string
 	Description string
 }
 
