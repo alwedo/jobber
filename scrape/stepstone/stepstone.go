@@ -56,13 +56,13 @@ type response struct {
 }
 
 type item struct {
-	ID          int       `json:"id"`
-	Title       string    `json:"title"`
-	URL         string    `json:"url"`
-	CompanyName string    `json:"companyName"`
-	DatePosted  time.Time `json:"datePosted"`
-	Location    string    `json:"location"`
-	TextSnippet string    `json:"textSnippet"`
+	ID          int                `json:"id"`
+	Title       string             `json:"title"`
+	URL         string             `json:"url"`
+	CompanyName string             `json:"companyName"`
+	Location    string             `json:"location"`
+	TextSnippet string             `json:"textSnippet"`
+	DatePosted  pgtype.Timestamptz `json:"datePosted"`
 }
 
 type stepstone struct {
@@ -91,23 +91,27 @@ func (s *stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOff
 			totalCount = resp.Pagination.TotalCount
 		}
 		for _, v := range resp.Items {
-			o := db.CreateOfferParams{
+			totalOffers = append(totalOffers, db.CreateOfferParams{
 				ID:          strconv.Itoa(v.ID),
 				Title:       v.Title,
 				Company:     v.CompanyName,
 				Location:    v.Location,
-				PostedAt:    pgtype.Timestamptz{Time: v.DatePosted, Valid: true},
+				PostedAt:    v.DatePosted,
 				Description: v.TextSnippet,
 				Source:      stepstoneName,
 				Url:         stepstoneBaseURL + v.URL,
-			}
-			totalOffers = append(totalOffers, o)
+			})
 		}
 		if resp.Pagination.PageCount == i {
 			break
 		}
 	}
 
+	if totalCount < len(totalOffers) {
+		// This will prevent panic in case pagination fails before fetching
+		// all the offers or an amount that's bigger than totalCount.
+		return totalOffers, err
+	}
 	// Return only valid offers. See response.Pagination.TotalCount.
 	return totalOffers[:totalCount], err
 }
