@@ -50,6 +50,7 @@ type response struct {
 		// It might be that it returns only one page with 25 elements but
 		// totalCount is 10. That means the first 10 are relevant offers
 		// and the rest are non relevant offers to keep you doomscrolling.
+		// Non relevant offers can be older or for different roles.
 		TotalCount int `json:"totalCount"`
 	} `json:"pagination"`
 }
@@ -69,7 +70,7 @@ type stepstone struct {
 	logger *slog.Logger
 }
 
-func New(log *slog.Logger) *stepstone {
+func New(log *slog.Logger) *stepstone { //nolint: revive
 	return &stepstone{client: retryhttp.New(), logger: log}
 }
 
