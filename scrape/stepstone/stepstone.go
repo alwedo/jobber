@@ -2,16 +2,26 @@ package stepstone
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/retryhttp"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
-	// stepStoneAPIURL request is done with POST and the requestBody below.
-	stepStoneAPIURL = "https://www.stepstone.de/public-api/resultlist/unifiedResultlist"
+	stepstoneName    = "Stepstone"
+	stepstoneBaseURL = "https://www.stepstone.de"
+	// stepstonePublicAPIEndpoint accepts POST request with the requestBody below.
+	stepstonePublicAPIEndpoint = "/public-api/resultlist/unifiedResultlist"
 
 	// requestBody takes a url value that contains the request parameters.
 	// The rest of the hardcoded fields are the minimum required. We pass a random uuid as userHashId.
@@ -20,17 +30,20 @@ const (
 	// Stepstone takes the keywords and the location as path paramters.
 	// ie. "https://www.stepstone.de/work/{keywords}/in-{location}"
 	// These params have to be URL encoded.
-	stepStoneURL = "https://www.stepstone.de/work/%s/in-%s"
-	paramPage    = "page"
-	paramSort    = "sort" // sort=2 is by age
-	paramAge     = "ag"   // ag=age_1 is one day ago, ag=age_7 is one week ago
+	stepstoneSearchEndpoint = "/work/%s/in-%s"
+	paramPage               = "page"
+	paramSort               = "sort"
+	paramSortValueByAge     = "2" // sort=2 is by age
+	paramAge                = "ag"
+	paramAgeValueAge1       = "age_1" // ag=age_1 is one day ago
+	paramAgeValueAge7       = "age_7" // ag=age_7 is one week ago
 )
 
-type responseBody struct {
-	Items      []Item `json:"items"`
+type response struct {
+	Items      []item `json:"items"`
 	Pagination struct {
 		Page      int `json:"page"`
-		PerPage   int `json:"perPage"`   // perPage is always 25.
+		PerPage   int `json:"perPage"`   // perPage is always 25. It might not be needed.
 		PageCount int `json:"pageCount"` // Total amount of pages for the search.
 
 		// TotalCount is the actual number of relevant offers.
@@ -41,27 +54,117 @@ type responseBody struct {
 	} `json:"pagination"`
 }
 
-type Item struct {
-	ID           int       `json:"id"`
-	Title        string    `json:"title"`
-	URL          string    `json:"url"`
-	CompanyName  string    `json:"companyName"`
-	DatePosted   time.Time `json:"datePosted"`
-	Location     string    `json:"location"`
-	WorkFromHome string    `json:"workFromHome"`
-	TextSnippet  string    `json:"textSnippet"`
+type item struct {
+	ID          int       `json:"id"`
+	Title       string    `json:"title"`
+	URL         string    `json:"url"`
+	CompanyName string    `json:"companyName"`
+	DatePosted  time.Time `json:"datePosted"`
+	Location    string    `json:"location"`
+	TextSnippet string    `json:"textSnippet"`
 }
 
-type Stepstone struct {
+type stepstone struct {
 	client *retryhttp.Client
 	logger *slog.Logger
 }
 
-func New(log *slog.Logger) *Stepstone {
-	return &Stepstone{client: retryhttp.New(), logger: log}
+func New(log *slog.Logger) *stepstone {
+	return &stepstone{client: retryhttp.New(), logger: log}
 }
 
-func (s *Stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
+func (s *stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
+	var totalOffers []db.CreateOfferParams
+	var totalCount int
+	var resp *response
+	var err error
 
-	return nil, nil
+	for i := 1; ; i++ {
+		resp, err = s.fetchOffers(ctx, query, i)
+		if err != nil {
+			// If fetchOffers fails we return the accumulated offers so far and the error.
+			err = fmt.Errorf("failed to fetchOffers in stepstone.Scrape: %w", err)
+			break
+		}
+		if totalCount == 0 {
+			totalCount = resp.Pagination.TotalCount
+		}
+		for _, v := range resp.Items {
+			o := db.CreateOfferParams{
+				ID:          strconv.Itoa(v.ID),
+				Title:       v.Title,
+				Company:     v.CompanyName,
+				Location:    v.Location,
+				PostedAt:    pgtype.Timestamptz{Time: v.DatePosted, Valid: true},
+				Description: v.TextSnippet,
+				Source:      stepstoneName,
+				Url:         stepstoneBaseURL + v.URL,
+			}
+			totalOffers = append(totalOffers, o)
+		}
+		if resp.Pagination.PageCount == i {
+			break
+		}
+	}
+
+	// Return only valid offers. See response.Pagination.TotalCount.
+	return totalOffers[:totalCount], err
+}
+
+func (s *stepstone) fetchOffers(ctx context.Context, query *db.Query, page int) (*response, error) {
+	// Stepstone expect the param page to be greather than 0.
+	if page < 1 {
+		return nil, fmt.Errorf("page must be greater than 0 in stepstone.fetchOffers")
+	}
+
+	// We use url.QueryEscape for the path values since we need spaces to be replaced with '+'.
+	// Leaving them as is and using url.Parse will replace them with '%20' and stepstone won't get proper results.
+	parsedURL, err := url.Parse(fmt.Sprintf(
+		stepstoneBaseURL+stepstoneSearchEndpoint,
+		url.QueryEscape(query.Keywords),
+		url.QueryEscape(query.Location),
+	))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL in stepstone.fetchOffers: %w", err)
+	}
+
+	// Add query params.
+	qp := &url.Values{}
+	qp.Add(paramSort, paramSortValueByAge)
+	qp.Add(paramPage, strconv.Itoa(page))
+	age := paramAgeValueAge7
+	// UpdatedAt is updated every time we run the query against Stepstone.
+	// Since Stepstone only accepts either 1 or 7 days in the past, we check
+	// if the last query was less than one day ago.
+	if query.UpdatedAt.Valid && time.Since(query.UpdatedAt.Time) < 24*time.Hour {
+		age = paramAgeValueAge1
+	}
+	qp.Add(paramAge, age)
+	parsedURL.RawQuery = qp.Encode()
+
+	body := strings.NewReader(fmt.Sprintf(requestBody, parsedURL.String(), uuid.New().String()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, stepstoneBaseURL+stepstonePublicAPIEndpoint, body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request in stepstone.fetchOffers: %w", err)
+	}
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	// Go default user agent breaks stepstone implementation.
+	// We need to pass a custom one.
+	req.Header.Set("User-Agent", "CustomUserAgent/1.0")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do http request in stepstone.fetchOffers: %w", err)
+	}
+	defer resp.Body.Close()
+
+	r := &response{}
+	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+		return nil, fmt.Errorf("failed to decode response body in stepstone.fetchOffers: %w", err)
+	}
+
+	return r, nil
 }
