@@ -124,7 +124,6 @@ func TestFetchOffersPage(t *testing.T) {
 						}
 					default:
 						resp, err := l.fetchOffersPage(ctx, query, p)
-
 						if !errors.Is(err, retryhttp.ErrRetryable) {
 							t.Errorf("expected err to be ErrRetryable, got: %v", err)
 						}
