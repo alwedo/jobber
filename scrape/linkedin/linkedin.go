@@ -36,7 +36,7 @@ type linkedIn struct {
 	logger *slog.Logger
 }
 
-func LinkedIn(l *slog.Logger) *linkedIn { //nolint: revive
+func New(l *slog.Logger) *linkedIn { //nolint: revive
 	return &linkedIn{client: retryhttp.New(), logger: l}
 }
 

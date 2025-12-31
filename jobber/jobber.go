@@ -16,7 +16,6 @@ import (
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/scrape"
-	"github.com/alwedo/jobber/scrape/linkedin"
 	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
@@ -33,7 +32,7 @@ type Jobber struct {
 }
 
 func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
-	return NewConfigurableJobber(log, db, linkedin.LinkedIn(log))
+	return NewConfigurableJobber(log, db, scrape.New(log))
 }
 
 func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (*Jobber, func()) {
@@ -178,6 +177,10 @@ func (j *Jobber) runQuery(qID int64) {
 		}
 	}
 
+	// TODO: Update Query will update the time even if there was a retryable error
+	// from the scraper sources. This could lead to missing offers due to update gaps.
+	// We need a better way to disassociate updated times from scrapers or even have a
+	// different approach on how queries relate to sources.
 	if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
 		j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
