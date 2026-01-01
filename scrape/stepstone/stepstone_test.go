@@ -80,7 +80,7 @@ func TestScrape(t *testing.T) {
 			t.Fatalf("expected error not to be nil, got %v", err)
 		}
 		if len(offers) != 22 {
-			t.Errorf("expected 70 offers, got %d", len(offers))
+			t.Errorf("expected 22 offers, got %d", len(offers))
 		}
 		if offers[0].ID != "13304740" {
 			t.Errorf("expected first offer ID to be '13304740', got %s", offers[0].ID)

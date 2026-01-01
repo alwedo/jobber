@@ -107,7 +107,7 @@ func (s *stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOff
 		}
 	}
 
-	if totalCount < len(totalOffers) {
+	if totalCount > len(totalOffers) {
 		// This will prevent panic in case pagination fails before fetching
 		// all the offers or an amount that's bigger than totalCount.
 		return totalOffers, err
