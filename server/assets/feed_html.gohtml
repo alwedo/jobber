@@ -35,6 +35,7 @@
       <tr>
         <th>Title</th>
         <th>Company</th>
+        <th>Description</th>
         <th>Location</th>
         <th>Posted</th>
         <th>Source</th>
@@ -43,6 +44,7 @@
       <tr>
         <td>{{ .Title }}</td>
         <td>{{ .Company }}</td>
+        <td>{{ .Description }}</td>
         <td>{{ .Location }}</td>
         <td>{{ postedAt .}}</td>
         <td><a href={{.Url}} target="_blank">{{.Source}}</a></td>
