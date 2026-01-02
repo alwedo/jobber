@@ -38,6 +38,7 @@ func (s *scraper) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOffer
 		totalOffers []db.CreateOfferParams
 		errs        []error
 		wg          sync.WaitGroup
+		mu          sync.Mutex
 	)
 
 	for _, source := range s.sources {
@@ -51,32 +52,27 @@ func (s *scraper) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOffer
 	}
 
 	go func() {
-		wg.Wait()
-		close(offersCh)
-		close(errorsCh)
+		for o := range offersCh {
+			mu.Lock()
+			totalOffers = append(totalOffers, o...)
+			mu.Unlock()
+		}
 	}()
 
-	for o := range offersCh {
-		totalOffers = append(totalOffers, o...)
-	}
+	go func() {
+		for e := range errorsCh {
+			mu.Lock()
+			errs = append(errs, e)
+			mu.Unlock()
+		}
+	}()
 
-	for e := range errorsCh {
-		errs = append(errs, e)
-	}
+	wg.Wait()
+	close(offersCh)
+	close(errorsCh)
 
 	return totalOffers, combineErrors(errs)
 }
-
-type mockScraper struct {
-	LastQuery *db.Query
-}
-
-func (m *mockScraper) Scrape(_ context.Context, q *db.Query) ([]db.CreateOfferParams, error) {
-	m.LastQuery = q
-	return []db.CreateOfferParams{}, nil
-}
-
-var MockScraper = &mockScraper{}
 
 func combineErrors(errs []error) error {
 	if len(errs) == 0 {
@@ -90,3 +86,36 @@ func combineErrors(errs []error) error {
 
 	return combinedErr
 }
+
+type mockScraper struct {
+	LastQuery *db.Query
+	mockErr   error
+}
+
+func newMockScraper(opts ...mockScraperOpts) *mockScraper {
+	scr := &mockScraper{}
+	for _, o := range opts {
+		o(scr)
+	}
+	return scr
+}
+
+func (m *mockScraper) Scrape(_ context.Context, q *db.Query) ([]db.CreateOfferParams, error) {
+	m.LastQuery = q
+	if m.mockErr != nil {
+		return nil, m.mockErr
+	}
+	return []db.CreateOfferParams{
+		{Title: q.Keywords + " jobs in " + q.Location},
+	}, nil
+}
+
+type mockScraperOpts func(*mockScraper)
+
+func mockScraperWithError(err error) mockScraperOpts {
+	return func(m *mockScraper) {
+		m.mockErr = err
+	}
+}
+
+var MockScraper = &mockScraper{}
