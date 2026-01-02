@@ -1,4 +1,4 @@
-package scrape
+package linkedin
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/metrics"
+	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -27,17 +28,16 @@ const (
 	paramFTPR        = "f_TPR"    // Time Posted Range. Values are in seconds, starting with 'r', ie. r86400 = Past 24 hours
 	searchInterval   = 10         // LinkedIn pagination interval
 	maxSearchInt     = 1000       // LinkedIn's site returns StatusBadRequest if 'start=1000'
-	maxRetries       = 5          // Exponential backoff limit.
 	oneWeekInSeconds = 604800
 )
 
 type linkedIn struct {
-	client *http.Client
+	client *retryhttp.Client
 	logger *slog.Logger
 }
 
-func LinkedIn(l *slog.Logger) *linkedIn { //nolint: revive
-	return &linkedIn{client: http.DefaultClient, logger: l}
+func New(l *slog.Logger) *linkedIn { //nolint: revive
+	return &linkedIn{client: retryhttp.New(), logger: l}
 }
 
 // search runs a linkedin search based on a query.
@@ -101,60 +101,20 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 
 	url, err := url.Parse(linkedInURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse URL: %w", err)
+		return nil, fmt.Errorf("failed to parse URL in linkedin.fetchOffersPage: %w", err)
 	}
 	url.RawQuery = qp.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request in linkedin.fetchOffersPage: %w", err)
 	}
 
-	// Exponential backoff
-	var (
-		retry   = true
-		retries int
-		resp    *http.Response
-		cErr    error
-	)
-
-	defer func() {
-		l.logger.Debug(
-			"LinkedIn HTTP call",
-			slog.Int64("qID", query.ID),
-			slog.String("keywords", query.Keywords),
-			slog.String("location", query.Location),
-			slog.Group("details",
-				slog.String("URL", url.String()),
-				slog.Any("response code", resp.StatusCode),
-				slog.Int("total retries", retries),
-			),
-		)
-	}()
-
-	for retry {
-		resp, cErr = l.client.Do(req)
-		if cErr != nil {
-			return nil, fmt.Errorf("failed to fetch URL: %w", err)
-		}
-		if resp.StatusCode != http.StatusOK {
-			if isRetryable[resp.StatusCode] {
-				if retries == maxRetries {
-					return nil, fmt.Errorf("%w with %w", ErrRetryable, err)
-				}
-				time.Sleep(time.Duration(retries * int(time.Second)))
-				retries++
-				continue
-			}
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("unable to read response body: %w", err)
-			}
-			defer resp.Body.Close()
-			return nil, fmt.Errorf("received status code: %d, url: %s, message: %s", resp.StatusCode, url.String(), string(body))
-		}
-		retry = false
+	resp, err := l.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do http request in linkedin.fetchOffersPage: %w", err)
 	}
+
 	return resp.Body, nil
 }
 
@@ -162,7 +122,7 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse HTML: %w", err)
+		return nil, fmt.Errorf("failed to parse HTML in linkedin.parseLinkedInBody: %w", err)
 	}
 	body.Close()
 	var jobs []db.CreateOfferParams

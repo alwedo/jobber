@@ -4,17 +4,17 @@
 
 Jobber is a dynamic job search RSS feed generator. 
 
-Are you tired of going from job portal to job portal doing your search? Those days are over! Jobber allows you to create job searches that will update hourly in the background and provide you an RSS feed for them.
+Are you tired of going from job portal to job portal doing your search? Those days are over! Jobber allows you to create job searches that will update hourly in the background and provide you an HTML or RSS feed for them.
 
 Check it out! [rssjobs.app](https://rssjobs.app/)
 
 ## Features
 
-- Currently scraping LinkedIn<sup>*</sup>.
-- Initial job searches will return up to 7 days of offers.
-- RSS Feed will display up to 7 days of offers.
-- Job searches that are not used for 7 days will be automatically deleted (ie. unsubscribed from the RSS feed).
-- Server usage and status metrics with Prometheus and Grafana.
+- Fetches offers from LinkedIn and Stepstone<sup>*</sup>.
+- RSS-XML and HTML feeds.
+- Hourly updated job feeds with up to 7 days of offers.
+- Automated unused job search deletion after one week of inactivity (ie. unsubscribed from the RSS feed).
+- Server logs, usage and status metrics with Prometheus and Grafana.
 
 <sup>*</sup> _jobber scrapes only publicly available information_
 

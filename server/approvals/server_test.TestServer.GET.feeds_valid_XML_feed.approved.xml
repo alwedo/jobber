@@ -21,5 +21,20 @@
     <guid isPermaLink="false">existing_offer</guid>
   </item>
   
+  <item>
+    <title>Senior Golang Dweeb at Späti GmbH (posted POSTED_AT_SCRUBBED)</title>
+    <link>https://www.linkedin.com/jobs/view/existing_offer2</link>
+    <description
+            ><![CDATA[
+            <b>Title</b>: Senior Golang Dweeb<br>
+            <b>Company</b>: Späti GmbH<br>
+            <b>Description</b>: some nifty description<br><b>Location</b>: Berlin<br>
+            <b>Posted</b>: DATE_SCRUBBED<br>
+            <b>Source</b>: <a href=https://www.stepstone.de/senior_golang_dweeb target="_blank">Stepstone</a>
+            ]]></description>
+    <pubDate>DATETIME_SCRUBBED</pubDate>
+    <guid isPermaLink="false">existing_offer2</guid>
+  </item>
+  
 </channel>
 </rss>

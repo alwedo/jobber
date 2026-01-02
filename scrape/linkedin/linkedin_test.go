@@ -1,4 +1,4 @@
-package scrape
+package linkedin
 
 import (
 	"context"
@@ -14,12 +14,13 @@ import (
 	"time"
 
 	"github.com/alwedo/jobber/db"
+	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestFetchOffersPage(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{&http.Client{Transport: mockResp}, slog.New(slog.NewJSONHandler(io.Discard, nil))}
+	l := &linkedIn{retryhttp.NewWithTransport(mockResp), slog.New(slog.NewJSONHandler(io.Discard, nil))}
 	ctx := context.Background()
 
 	t.Run("first time query", func(t *testing.T) {
@@ -29,7 +30,7 @@ func TestFetchOffersPage(t *testing.T) {
 		}
 		resp, err := l.fetchOffersPage(ctx, query, 0)
 		if err != nil {
-			t.Errorf("error fetching offers: %s", err.Error())
+			t.Fatalf("error fetching offers: %s", err.Error())
 		}
 		defer resp.Close()
 		values := mockResp.req.URL.Query()
@@ -123,7 +124,7 @@ func TestFetchOffersPage(t *testing.T) {
 						}
 					default:
 						resp, err := l.fetchOffersPage(ctx, query, p)
-						if !errors.Is(err, ErrRetryable) {
+						if !errors.Is(err, retryhttp.ErrRetryable) {
 							t.Errorf("expected err to be ErrRetryable, got: %v", err)
 						}
 						if resp != nil {
@@ -181,7 +182,7 @@ func TestParseLinkedInBody(t *testing.T) {
 
 func TestScrape(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{&http.Client{Transport: mockResp}, slog.New(slog.NewJSONHandler(io.Discard, nil))}
+	l := &linkedIn{retryhttp.NewWithTransport(mockResp), slog.New(slog.NewJSONHandler(io.Discard, nil))}
 
 	t.Run("expected behaviour", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
@@ -200,7 +201,7 @@ func TestScrape(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			query := &db.Query{Keywords: "retry-fail", Location: "the moon"}
 			offers, err := l.Scrape(context.Background(), query)
-			if !errors.Is(err, ErrRetryable) {
+			if !errors.Is(err, retryhttp.ErrRetryable) {
 				t.Errorf("expected ErrRetryable, got: %v", err)
 			}
 			synctest.Wait()
@@ -221,7 +222,9 @@ func (h *linkedInMockResp) RoundTrip(req *http.Request) (*http.Response, error) 
 	// Save the last request for further inspection
 	h.req = req
 
+	resp := &http.Response{}
 	status := http.StatusOK
+
 	// Mock 429. We currently don't know LinkedIn's 429 strategy.
 	// We're starting with 1 second delay and increase if it doesn't work.
 	if req.URL.Query().Get(paramKeywords) == "retry" {
@@ -250,15 +253,15 @@ func (h *linkedInMockResp) RoundTrip(req *http.Request) (*http.Response, error) 
 	body, err := os.Open(fn)
 	if err != nil {
 		h.t.Fatalf("failed to open %s in mockResp.RoundTrip: %s", fn, err)
+		return resp, err
 	}
+	resp.Body = body
+	resp.StatusCode = status
 
 	// Save last request time for mocking 429
 	h.lastReq = time.Now()
 
-	return &http.Response{
-		StatusCode: status,
-		Body:       body,
-	}, nil
+	return resp, nil
 }
 
 func newLinkedInMockResp(t testing.TB) *linkedInMockResp {

@@ -123,7 +123,7 @@ func TestListOffers(t *testing.T) {
 			name:       "valid query with offers",
 			keywords:   "golang",
 			location:   "berlin",
-			wantOffers: 1,
+			wantOffers: 2,
 			wantErr:    nil,
 		},
 		{
