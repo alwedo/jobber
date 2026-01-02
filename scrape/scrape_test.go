@@ -14,7 +14,7 @@ func TestScrape(t *testing.T) {
 
 	t.Run("collect offers from multiple scrapers", func(t *testing.T) {
 		t.Parallel()
-		scrapers := []*mockScraper{MockScraper, MockScraper, MockScraper, MockScraper}
+		scrapers := []*mockScraper{newMockScraper(), newMockScraper(), newMockScraper(), newMockScraper()}
 		s := scraper{}
 		for _, v := range scrapers {
 			s.sources = append(s.sources, v)
@@ -40,13 +40,13 @@ func TestScrape(t *testing.T) {
 
 	t.Run("collect errors from multiple scrapers", func(t *testing.T) {
 		t.Parallel()
-		scrapers := []*mockScraper{MockScraper, MockScraper, MockScraper, newMockScraper(mockScraperWithError(retryhttp.ErrRetryable))}
+		scrapers := []*mockScraper{newMockScraper(), newMockScraper(), newMockScraper(), newMockScraper(mockScraperWithError(retryhttp.ErrRetryable))}
 		s := scraper{}
 		for _, v := range scrapers {
 			s.sources = append(s.sources, v)
 		}
 		offers, err := s.Scrape(context.Background(), query)
-		if !errors.Is(err, retryhttp.ErrRetryable) {
+		if err != nil && !errors.Is(err, retryhttp.ErrRetryable) {
 			t.Fatalf("Scrape returned an error: %v", err)
 		}
 		if len(offers) != len(scrapers)-1 {

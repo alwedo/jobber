@@ -31,45 +31,42 @@ func New(log *slog.Logger) *scraper { //nolint: revive
 	}
 }
 
+type result struct {
+	offers []db.CreateOfferParams
+	err    error
+}
+
 func (s *scraper) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
 	var (
-		offersCh    = make(chan []db.CreateOfferParams)
-		errorsCh    = make(chan error)
+		results     = make(chan result)
 		totalOffers []db.CreateOfferParams
 		errs        []error
 		wg          sync.WaitGroup
-		mu          sync.Mutex
 	)
 
 	for _, source := range s.sources {
 		wg.Go(func() {
 			offers, err := source.Scrape(ctx, query)
-			if err != nil {
-				errorsCh <- err
+			select {
+			case results <- result{offers: offers, err: err}:
+			case <-ctx.Done():
 			}
-			offersCh <- offers
 		})
 	}
 
 	go func() {
-		for o := range offersCh {
-			mu.Lock()
-			totalOffers = append(totalOffers, o...)
-			mu.Unlock()
-		}
+		wg.Wait()
+		close(results)
 	}()
 
-	go func() {
-		for e := range errorsCh {
-			mu.Lock()
-			errs = append(errs, e)
-			mu.Unlock()
+	for r := range results {
+		if r.err != nil {
+			errs = append(errs, r.err)
 		}
-	}()
-
-	wg.Wait()
-	close(offersCh)
-	close(errorsCh)
+		if len(r.offers) > 0 {
+			totalOffers = append(totalOffers, r.offers...)
+		}
+	}
 
 	return totalOffers, combineErrors(errs)
 }
