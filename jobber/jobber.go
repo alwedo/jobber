@@ -16,7 +16,6 @@ import (
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/scrape"
-	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
@@ -154,14 +153,11 @@ func (j *Jobber) runQuery(qID int64) {
 
 	offers, err := j.scpr.Scrape(j.ctx, q)
 	if err != nil {
-		if errors.Is(err, retryhttp.ErrRetryable) {
-			// Retryable errors still bring data. We log a warning for further analysis and continue.
-			j.logger.Warn("exhausted retries in jobber.runQuery", slog.Int64("queryID", q.ID), slog.Any("error", err))
-		} else {
-			j.logger.Error("scrape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
-			return
-		}
+		// Errors in scrapers are logged but we continue processing since
+		// at the moment we don't have a way to differentiate errors per scraper.
+		j.logger.Error("scrape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
+
 	if len(offers) > 0 {
 		for _, o := range offers {
 			if err := j.db.CreateOffer(j.ctx, &o); err != nil {
@@ -175,14 +171,13 @@ func (j *Jobber) runQuery(qID int64) {
 				j.logger.Error("unable to create query offer association in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 			}
 		}
-	}
-
-	// TODO: Update Query will update the time even if there was a retryable error
-	// from the scraper sources. This could lead to missing offers due to update gaps.
-	// We need a better way to disassociate updated times from scrapers or even have a
-	// different approach on how queries relate to sources.
-	if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
-		j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+		// TODO: Update Query will update the time even if there was a retryable error
+		// from the scraper sources. This could lead to missing offers due to update gaps.
+		// We need a better way to disassociate updated times from scrapers or even have a
+		// different approach on how queries relate to sources.
+		if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
+			j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+		}
 	}
 
 	j.logger.Debug("successfuly completed jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("keywords", q.Keywords), slog.String("location", q.Location))

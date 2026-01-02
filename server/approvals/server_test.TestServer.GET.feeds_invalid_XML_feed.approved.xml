@@ -12,7 +12,6 @@
   <description
             ><![CDATA[try creating a new job search feed <a href="/">here</a>]]></description>
     <link>https://127.0.0.1:PORT_SCRUBBED</link>
-    <pubDate>DATETIME_SCRUBBED</pubDate>
     <guid isPermaLink="false">1</guid>
   </item></channel>
 </rss>

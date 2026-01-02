@@ -212,6 +212,38 @@ func TestScrape(t *testing.T) {
 	})
 }
 
+func TestNormalizeTime(t *testing.T) {
+	tests := []struct {
+		postedAt, relative, wantTime string
+	}{
+		{
+			relative: "2 days ago",
+			wantTime: "2000-01-01 06:00:00 +0100 CET",
+		},
+		{
+			relative: "2 hours ago",
+			wantTime: "2000-01-01 04:00:00 +0100 CET",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s_%s", tt.postedAt, tt.relative), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				// Default bubble time is "2000-01-01 01:00:00 +0100 CET"
+				// We add 5 hours so resting 2 hours doesn't change all the string.
+				time.Sleep(5 * time.Hour)
+				gotTime, err := normalizeTime("2000-01-01", tt.relative)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if gotTime.String() != tt.wantTime {
+					t.Errorf("expected time %s, got %s", tt.wantTime, gotTime.String())
+				}
+			})
+		})
+	}
+}
+
 type linkedInMockResp struct {
 	t       testing.TB
 	req     *http.Request
