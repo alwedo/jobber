@@ -215,5 +215,5 @@ func normalizeTime(postedAt, rel string) (time.Time, error) {
 		)
 	}
 
-	return parsedTime, nil
+	return parsedTime.UTC(), nil
 }
