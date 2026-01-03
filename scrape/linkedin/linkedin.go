@@ -177,7 +177,7 @@ func normalizeText(s string) string {
 }
 
 // normalizeTime constructs the most accurate possible time based
-// on LinkedIn's obsucred machine-readable and human-readable times.
+// on LinkedIn's obscured machine-readable and human-readable times.
 // If the LinkedIn offer was posted hours ago, the time will look like this:
 //
 //	<time class="job-search-card__listdate" datetime="2025-11-11">
@@ -190,23 +190,24 @@ func normalizeText(s string) string {
 //
 // If the time is in hours, we'll substract it to the current time.
 // Otherwise will add the current hour, min and secs to the parsed time
-// to avoid having every old offer looks as being posted at midnight.
+// to avoid having every old offer look like it was posted at midnight.
 //
 // Upon errors normalizeTime will return time.Now() and the error.
 func normalizeTime(postedAt, rel string) (time.Time, error) {
 	var parsedTime time.Time
+	var now = time.Now()
+
 	if strings.Contains(rel, "hours") {
 		// Split "2 hours ago" to find the number of hours.
 		v, err := strconv.Atoi(strings.Split(rel, " ")[0])
 		if err != nil {
-			return time.Now(), fmt.Errorf("unable to parse relative time in normalizeTime: %w", err)
+			return now, fmt.Errorf("unable to parse relative time in normalizeTime: %w", err)
 		}
-		parsedTime = time.Now().Add(-time.Duration(v) * time.Hour)
+		parsedTime = now.Add(-time.Duration(v) * time.Hour)
 	} else {
-		now := time.Now()
 		t, err := time.ParseInLocation("2006-01-02", postedAt, time.Local)
 		if err != nil {
-			return time.Now(), fmt.Errorf("unable to parse date in normalizeTime: %w", err)
+			return now, fmt.Errorf("unable to parse date in normalizeTime: %w", err)
 		}
 		parsedTime = time.Date(
 			t.Year(), t.Month(), t.Day(),
