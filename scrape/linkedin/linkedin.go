@@ -143,19 +143,20 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 			job.Url = linkedInBaseURL + job.ID
 
 			// Extract Title
-			job.Title = normalize(s.Find(".base-search-card__title").Text())
+			job.Title = normalizeText(s.Find(".base-search-card__title").Text())
 
 			// Extract Company
-			job.Company = normalize(s.Find(".base-search-card__subtitle a").Text())
+			job.Company = normalizeText(s.Find(".base-search-card__subtitle a").Text())
 
 			// Extract Location
-			job.Location = normalize(s.Find(".job-search-card__location").Text())
+			job.Location = normalizeText(s.Find(".job-search-card__location").Text())
 
 			// Extract Posted Date
-			postedAt, _ := s.Find("time").Attr("datetime")
-			t, err := time.Parse("2006-01-02", postedAt)
+			timeSel := s.Find("time")
+			postedAt, _ := timeSel.Attr("datetime")
+			t, err := normalizeTime(postedAt, normalizeText(timeSel.Text()))
 			if err != nil {
-				l.logger.Error("unable to parse 'postedAt' time in scrape.LinkedIn", slog.Any("error", err))
+				l.logger.Error("unable to normalize time in scrape.LinkedIn", slog.Any("error", err))
 			}
 			job.PostedAt = pgtype.Timestamptz{Time: t, Valid: true}
 
@@ -166,11 +167,54 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 	return jobs, nil
 }
 
-// normalize removes newlines and trims whitespace from a string.
-func normalize(s string) string {
+// normalizeText removes newlines and trims whitespaces from a string.
+func normalizeText(s string) string {
 	str := strings.Split(s, "\n")
 	for i, v := range str {
 		str[i] = strings.TrimSpace(v)
 	}
 	return strings.TrimSpace(strings.Join(str, " "))
+}
+
+// normalizeTime constructs the most accurate possible time based
+// on LinkedIn's obscured machine-readable and human-readable times.
+// If the LinkedIn offer was posted hours ago, the time will look like this:
+//
+//	<time class="job-search-card__listdate" datetime="2025-11-11">
+//	2 hours ago
+//	</time>
+//
+// But past a certain point the human readable number will be be shown as:
+//
+//	2 days ago
+//
+// If the time is in hours, we'll substract it to the current time.
+// Otherwise will add the current hour, min and secs to the parsed time
+// to avoid having every old offer look like it was posted at midnight.
+//
+// Upon errors normalizeTime will return time.Now() and the error.
+func normalizeTime(postedAt, rel string) (time.Time, error) {
+	var parsedTime time.Time
+	var now = time.Now()
+
+	if strings.Contains(rel, "hours") {
+		// Split "2 hours ago" to find the number of hours.
+		v, err := strconv.Atoi(strings.Split(rel, " ")[0])
+		if err != nil {
+			return now, fmt.Errorf("unable to parse relative time in normalizeTime: %w", err)
+		}
+		parsedTime = now.Add(-time.Duration(v) * time.Hour)
+	} else {
+		t, err := time.ParseInLocation("2006-01-02", postedAt, time.Local)
+		if err != nil {
+			return now, fmt.Errorf("unable to parse date in normalizeTime: %w", err)
+		}
+		parsedTime = time.Date(
+			t.Year(), t.Month(), t.Day(),
+			now.Hour(), now.Minute(), now.Second(), now.Nanosecond(),
+			t.Location(),
+		)
+	}
+
+	return parsedTime.UTC(), nil
 }

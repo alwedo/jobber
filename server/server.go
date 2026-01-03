@@ -208,17 +208,13 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 }
 
 var funcMap = template.FuncMap{
-	"createdAt": func(o *db.Offer) string {
-		return o.CreatedAt.Time.Format(time.RFC1123Z)
+	"pubDate": func(o *db.Offer) string {
+		return o.PostedAt.Time.Format(time.RFC1123Z)
 	},
 	"title": func(o *db.Offer) string {
-		t := fmt.Sprintf("%s at %s (posted %s)", o.Title, o.Company, o.PostedAt.Time.Format("Jan 2"))
-		return html.EscapeString(t)
+		return html.EscapeString(o.Title + " at " + o.Company)
 	},
 	"postedAt": func(o *db.Offer) string {
 		return o.PostedAt.Time.Format("Jan 2")
-	},
-	"now": func() string {
-		return time.Now().Format(time.RFC1123Z)
 	},
 }
