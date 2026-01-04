@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -150,8 +151,17 @@ func (s *server) feed() http.HandlerFunc {
 			}
 		}
 		if updatedAt != nil && updatedAt.Valid {
-			updatedAt.Time.Hour()
-			w.Header().Add("Cache-Control", "max-age=%d")
+			// We set a Cache-Control header with max-age so clients don't
+			// waste time re-fetching information that hasn't been updated.
+			// Since the queries get updated hourly, we want the max-age value
+			// to be time in seconds until the next update.
+			// If the calculated value is more than one hour we don't retun the
+			// header since we can't guarantee when the next update will be.
+			lastUpdate := time.Since(updatedAt.Time)
+			if lastUpdate < time.Hour {
+				t := time.Hour - lastUpdate
+				w.Header().Add("Cache-Control", "max-age="+strconv.Itoa(int(t.Seconds())))
+			}
 		}
 
 		tmpl := assetFeedRSS
