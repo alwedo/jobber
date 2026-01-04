@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -130,33 +131,59 @@ func (s *server) feed() http.HandlerFunc {
 			s.logger.Info("missing params in server.feed", slog.String("error", err.Error()))
 			return
 		}
-		d := &feedData{
-			Keywords: params.Get(queryParamKeywords),
-			Location: params.Get(queryParamLocation),
-			Host:     r.Host,
-		}
-		offers, err := s.jobber.ListOffers(params.Get(queryParamKeywords), params.Get(queryParamLocation))
+		var (
+			keywords = params.Get(queryParamKeywords)
+			location = params.Get(queryParamLocation)
+			notFound bool
+		)
+
+		offers, updatedAt, err := s.jobber.ListOffers(r.Context(), &db.GetQueryParams{
+			Keywords: keywords,
+			Location: location,
+		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				d.NotFound = true
+				notFound = true
 				s.logger.Info("no query found in server.feed", slog.Any("params", params), slog.String("error", err.Error()))
 			} else {
 				s.internalError(w, "failed to get query in server.feed", err)
 				return
 			}
 		}
-		d.Offers = offers
+		if updatedAt != nil && updatedAt.Valid {
+			// We set a Cache-Control header with max-age so clients don't
+			// waste time re-fetching information that hasn't been updated.
+			// Since the queries get updated hourly, we want the max-age value
+			// to be time in seconds until the next update.
+			// If the calculated value is more than one hour we don't retun the
+			// header since we can't guarantee when the next update will be.
+			lastUpdate := time.Since(updatedAt.Time)
+			if lastUpdate < time.Hour {
+				t := time.Hour - lastUpdate
+				w.Header().Add("Cache-Control", "max-age="+strconv.Itoa(int(t.Seconds())))
+			}
+		}
 
-		tmpl := assetFeedRSS
-		// If the header has Accept="text/html" it means it's coming from a Browser.
-		// We set the template to assetFeedHTML and render html instead of RSS XML.
-		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		var tmpl string
+		// Set template and Content-Type header based on Accept header.
+		// If Accept header is 'text/html' we assue the request is coming
+		// from a browser, otherwise it's an RSS reader.
+		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
+		case true:
 			tmpl = assetFeedHTML
 			w.Header().Add("Content-Type", "text/html")
-		} else {
+		default:
+			tmpl = assetFeedRSS
 			w.Header().Add("Content-Type", "application/rss+xml")
 		}
-		if err := s.templates.ExecuteTemplate(w, tmpl, d); err != nil {
+
+		if err := s.templates.ExecuteTemplate(w, tmpl, &feedData{
+			Keywords: keywords,
+			Location: location,
+			Host:     r.Host,
+			NotFound: notFound,
+			Offers:   offers,
+		}); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
 			return
 		}

@@ -108,9 +108,28 @@ func TestServer(t *testing.T) {
 				queryParamKeywords: "golang",
 				queryParamLocation: "berlin",
 			},
-			wantStatus:     http.StatusOK,
-			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/rss+xml",
+				// golang-berlin query in the db seed has been updated 30 min ago.
+				"Cache-Control": "max-age=1799",
+			},
 			wantBodyAssert: "xml",
+		},
+		{
+			name:   "valid XML feed with no cache-control",
+			path:   "/feeds",
+			method: http.MethodGet,
+			params: map[string]string{
+				queryParamKeywords: "data scientist",
+				queryParamLocation: "new york",
+			},
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/rss+xml",
+				// data scientist-new york query updated_at field is null in db seed.
+				"Cache-Control": "",
+			},
 		},
 		{
 			name:   "invalid XML feed", // Returns a valid xml with a single post with instructions.

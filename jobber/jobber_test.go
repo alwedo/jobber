@@ -143,7 +143,10 @@ func TestListOffers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o, err := j.ListOffers(tt.keywords, tt.location)
+			o, _, err := j.ListOffers(context.Background(), &db.GetQueryParams{
+				Keywords: tt.keywords,
+				Location: tt.location,
+			})
 			switch {
 			case err == nil:
 				if len(o) != tt.wantOffers {
