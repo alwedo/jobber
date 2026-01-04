@@ -5,51 +5,65 @@
     </p>
     {{ else }}
     <style>
-    table {
-      border-collapse: collapse;
-      table-layout: auto
+    .container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
     }
 
-    .center {
-      margin-left: auto;
-      margin-right: auto;
+    .details-wrapper {
+        width: auto;
+        max-width: 100%;
+        text-align: left;
+    }
+    details {
+        margin-bottom: 4px;
+        width: 100%;
+    }
+    details > summary {
+        list-style-type: none;
     }
 
-    td, th {
-      border: 1px solid #dddddd;
-      text-align: left;
-      padding: 8px;
-      white-space: nowrap;
+    details > summary::before {
+        content: '▹ ';
     }
 
-    tr:nth-child(even) {
-      background-color: #dddddd;
+    details[open] > summary::before {
+        content: '▿ ';
     }
 
-    th, td {
-       width: auto;
-     }
+    details > ul {
+        max-width: 500px;
+        width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+
+    @media (max-width: 600px) {
+        details > ul {
+            max-width: 100%;
+        }
+    }
     </style>
     <p style="text-align: center"><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br></p>
-    <table class="center">
-      <tr>
-        <th>Title</th>
-        <th>Company</th>
-        <th>Description</th>
-        <th>Location</th>
-        <th>Posted</th>
-        <th>Source</th>
-      </tr>
-      {{ range .Offers }}
-      <tr>
-        <td>{{ .Title }}</td>
-        <td>{{ .Company }}</td>
-        <td>{{ .Description }}</td>
-        <td>{{ .Location }}</td>
-        <td>{{ postedAt .}}</td>
-        <td><a href={{.Url}} target="_blank">{{.Source}}</a></td>
-      </tr>
+
+    <div class="container">
+              <div class="details-wrapper">
+                  {{ range .Offers }}
+                      <details>
+                          <summary>{{title .}}</summary>
+                          <ul>
+                              <li><b>Title:</b> {{ .Title }}</li>
+                              <li><b>Company:</b> {{ .Company }}</li>
+                              {{ if .Description }}<li><b>Description:</b> {{ .Description }}</li>{{ end -}}
+                              <li><b>Location:</b> {{ .Location }}</li>
+                              <li><b>Posted:</b> {{ pubDate . }}</li>
+                              <li><b>Source:</b> <a href="{{.Url}}" target="_blank">{{.Source}}</a></li>
+                          </ul>
+                      </details>
+                  {{ end }}
+              </div>
+          </div>
       {{ end }}
-    </table>{{ end }}
 </main>
 {{template "bottom" .}}
