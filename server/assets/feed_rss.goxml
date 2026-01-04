@@ -20,7 +20,7 @@
   {{ range .Offers }}
   <item>
     <title>{{title .}}</title>
-    <link>https://www.linkedin.com/jobs/view/{{.ID}}</link>
+    <link>{{.Url}}</link>
     <description
             ><![CDATA[
             <b>Title</b>: {{ .Title }}<br>
