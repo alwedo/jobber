@@ -164,15 +164,19 @@ func (s *server) feed() http.HandlerFunc {
 			}
 		}
 
-		tmpl := assetFeedRSS
-		// If the header has Accept="text/html" it means it's coming from a Browser.
-		// We set the template to assetFeedHTML and render html instead of RSS XML.
-		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		var tmpl string
+		// Set template and Content-Type header based on Accept header.
+		// If Accept header is 'text/html' we assue the request is coming
+		// from a browser, otherwise it's an RSS reader.
+		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
+		case true:
 			tmpl = assetFeedHTML
 			w.Header().Add("Content-Type", "text/html")
-		} else {
+		default:
+			tmpl = assetFeedRSS
 			w.Header().Add("Content-Type", "application/rss+xml")
 		}
+
 		if err := s.templates.ExecuteTemplate(w, tmpl, &feedData{
 			Keywords: keywords,
 			Location: location,
