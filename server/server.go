@@ -130,22 +130,29 @@ func (s *server) feed() http.HandlerFunc {
 			s.logger.Info("missing params in server.feed", slog.String("error", err.Error()))
 			return
 		}
-		d := &feedData{
-			Keywords: params.Get(queryParamKeywords),
-			Location: params.Get(queryParamLocation),
-			Host:     r.Host,
-		}
-		offers, err := s.jobber.ListOffers(params.Get(queryParamKeywords), params.Get(queryParamLocation))
+		var (
+			keywords = params.Get(queryParamKeywords)
+			location = params.Get(queryParamLocation)
+			notFound bool
+		)
+
+		offers, updatedAt, err := s.jobber.ListOffers(r.Context(), &db.GetQueryParams{
+			Keywords: keywords,
+			Location: location,
+		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				d.NotFound = true
+				notFound = true
 				s.logger.Info("no query found in server.feed", slog.Any("params", params), slog.String("error", err.Error()))
 			} else {
 				s.internalError(w, "failed to get query in server.feed", err)
 				return
 			}
 		}
-		d.Offers = offers
+		if updatedAt != nil && updatedAt.Valid {
+			updatedAt.Time.Hour()
+			w.Header().Add("Cache-Control", "max-age=%d")
+		}
 
 		tmpl := assetFeedRSS
 		// If the header has Accept="text/html" it means it's coming from a Browser.
@@ -156,7 +163,13 @@ func (s *server) feed() http.HandlerFunc {
 		} else {
 			w.Header().Add("Content-Type", "application/rss+xml")
 		}
-		if err := s.templates.ExecuteTemplate(w, tmpl, d); err != nil {
+		if err := s.templates.ExecuteTemplate(w, tmpl, &feedData{
+			Keywords: keywords,
+			Location: location,
+			Host:     r.Host,
+			NotFound: notFound,
+			Offers:   offers,
+		}); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
 			return
 		}

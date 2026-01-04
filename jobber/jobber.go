@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Jobber struct {
@@ -118,18 +119,19 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 // ListOffers return the list of offers posted in the last 7 days for a
 // given query's keywords and location.
 // If the query doesn't exist, a sql.ErrNoRows will be returned.
-func (j *Jobber) ListOffers(keywords, location string) ([]*db.Offer, error) {
-	q, err := j.db.GetQuery(j.ctx, &db.GetQueryParams{
-		Keywords: keywords,
-		Location: location,
-	})
+func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.Offer, *pgtype.Timestamptz, error) {
+	q, err := j.db.GetQuery(ctx, gqp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get query: %w", err)
+		return nil, nil, fmt.Errorf("getting query in jobber.ListOffers: %w", err)
 	}
-	if err := j.db.UpdateQueryQAT(j.ctx, q.ID); err != nil {
-		j.logger.Error("unable to update query timestamp", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+	if err := j.db.UpdateQueryQAT(ctx, q.ID); err != nil {
+		j.logger.Error("unable to update query timestamp in jobber.ListOffers", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
-	return j.db.ListOffers(j.ctx, q.ID)
+	o, err := j.db.ListOffers(ctx, q.ID)
+	if err != nil {
+		return o, nil, fmt.Errorf("listing offers in jobber.ListOffers: %w", err)
+	}
+	return o, &q.UpdatedAt, nil
 }
 
 func (j *Jobber) runQuery(qID int64) {
