@@ -58,61 +58,76 @@
 
 <main>
     <style>
-    table {
-      border-collapse: collapse;
-      table-layout: auto
+    .container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
     }
 
-    .center {
-      margin-left: auto;
-      margin-right: auto;
+    .details-wrapper {
+        width: auto;
+        max-width: 100%;
+        text-align: left;
+    }
+    details {
+        margin-bottom: 4px;
+        width: 100%;
+    }
+    details > summary {
+        list-style-type: none;
     }
 
-    td, th {
-      border: 1px solid #dddddd;
-      text-align: left;
-      padding: 8px;
-      white-space: nowrap;
+    details > summary::before {
+        content: '▹ ';
     }
 
-    tr:nth-child(even) {
-      background-color: #dddddd;
+    details[open] > summary::before {
+        content: '▿ ';
     }
 
-    th, td {
-       width: auto;
-     }
+    details > ul {
+        max-width: 500px;
+        width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+
+    @media (max-width: 600px) {
+        details > ul {
+            max-width: 100%;
+        }
+    }
     </style>
     <p style="text-align: center"><b>golang</b> jobs in <b>berlin</b><br></p>
-    <table class="center">
-      <tr>
-        <th>Title</th>
-        <th>Company</th>
-        <th>Description</th>
-        <th>Location</th>
-        <th>Posted</th>
-        <th>Source</th>
-      </tr>
+
+    <div class="container">
+              <div class="details-wrapper">
+                  
+                      <details>
+                          <summary>Junior Golang Dweeb at Späti GmbH</summary>
+                          <ul>
+                              <li><b>Title:</b> Junior Golang Dweeb</li>
+                              <li><b>Company:</b> Späti GmbH</li>
+                              <li><b>Location:</b> Berlin</li>
+                              <li><b>Posted:</b>DATETIME_SCRUBBED</li>
+                              <li><b>Source:</b> <a href="https://www.linkedin.com/jobs/view/existing_offer" target="_blank">LinkedIn</a></li>
+                          </ul>
+                      </details>
+                  
+                      <details>
+                          <summary>Senior Golang Dweeb at Späti GmbH</summary>
+                          <ul>
+                              <li><b>Title:</b> Senior Golang Dweeb</li>
+                              <li><b>Company:</b> Späti GmbH</li>
+                              <li><b>Description:</b> some nifty description</li><li><b>Location:</b> Berlin</li>
+                              <li><b>Posted:</b>DATETIME_SCRUBBED</li>
+                              <li><b>Source:</b> <a href="https://www.stepstone.de/senior_golang_dweeb" target="_blank">Stepstone</a></li>
+                          </ul>
+                      </details>
+                  
+              </div>
+          </div>
       
-      <tr>
-        <td>Junior Golang Dweeb</td>
-        <td>Späti GmbH</td>
-        <td></td>
-        <td>Berlin</td>
-        <td>DATE_SCRUBBED</td>
-        <td><a href=https://www.linkedin.com/jobs/view/existing_offer target="_blank">LinkedIn</a></td>
-      </tr>
-      
-      <tr>
-        <td>Senior Golang Dweeb</td>
-        <td>Späti GmbH</td>
-        <td>some nifty description</td>
-        <td>Berlin</td>
-        <td>DATE_SCRUBBED</td>
-        <td><a href=https://www.stepstone.de/senior_golang_dweeb target="_blank">Stepstone</a></td>
-      </tr>
-      
-    </table>
 </main>
 
 <footer>
