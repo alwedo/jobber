@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/jobber"
@@ -19,12 +20,6 @@ func TestServer(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := jobber.NewConfigurableJobber(l, d, scrape.MockScraper)
-	defer jCloser()
-	svr, err := New(l, j)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	tests := []struct {
 		name           string
@@ -36,6 +31,7 @@ func TestServer(t *testing.T) {
 		wantHeaders    map[string]string
 		wantBodyAssert string // takes the extension of the file you want to assert, ie. "html" or "xml"
 		wantBodyString string
+		jobberOpts     []jobber.Options
 	}{
 		{
 			name:   "with correct values",
@@ -46,6 +42,18 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "berlin",
 			},
 			wantStatus:     http.StatusOK,
+			wantBodyAssert: "html",
+		},
+		{
+			name:   "query creation timeout",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: "fluffy dogs",
+				queryParamLocation: "berlin",
+			},
+			wantStatus:     http.StatusOK,
+			jobberOpts:     []jobber.Options{jobber.WithTimeOut(time.Nanosecond)},
 			wantBodyAssert: "html",
 		},
 		{
@@ -201,12 +209,17 @@ func TestServer(t *testing.T) {
 		},
 	}
 
-	client := http.DefaultClient
-	server := httptest.NewServer(svr.Handler)
-	defer server.Close()
-
 	for _, tt := range tests {
 		t.Run(tt.method+tt.path+" "+tt.name, func(t *testing.T) {
+			j, jCloser := jobber.NewConfigurableJobber(l, d, scrape.MockScraper, tt.jobberOpts...)
+			defer jCloser()
+			svr, err := New(l, j)
+			if err != nil {
+				t.Fatal(err)
+			}
+			client := http.DefaultClient
+			server := httptest.NewServer(svr.Handler)
+			defer server.Close()
 			qp := url.Values{}
 			for k, v := range tt.params {
 				qp.Add(k, v)

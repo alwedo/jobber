@@ -102,6 +102,18 @@ func TestCreateQuery(t *testing.T) {
 	})
 }
 
+func TestCreateWithTimeOut(t *testing.T) {
+	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+	d, dbCloser := db.NewTestDB(t)
+	defer dbCloser()
+	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraper, WithTimeOut(time.Nanosecond))
+	defer jCloser()
+	err := j.CreateQuery("cuak", "squeek")
+	if !errors.Is(err, ErrTimedOut) {
+		t.Errorf("wanted err to be ErrTimedOut, got: %v", err)
+	}
+}
+
 func TestListOffers(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)

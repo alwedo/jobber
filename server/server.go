@@ -93,9 +93,15 @@ func (s *server) create() http.HandlerFunc {
 			s.logger.Info("missing params in server.create", slog.String("error", err.Error()))
 			return
 		}
+
+		var timedOut bool
 		if err := s.jobber.CreateQuery(params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
-			s.internalError(w, "failed to create query", err)
-			return
+			if errors.Is(err, jobber.ErrTimedOut) {
+				timedOut = true
+			} else {
+				s.internalError(w, "failed to create query", err)
+				return
+			}
 		}
 
 		scheme := "https://"
@@ -109,7 +115,12 @@ func (s *server) create() http.HandlerFunc {
 		}
 		u.RawQuery = params.Encode()
 
-		if err := s.templates.ExecuteTemplate(w, assetCreateResponse, u.String()); err != nil {
+		data := struct {
+			URL      string
+			TimedOut bool
+		}{u.String(), timedOut}
+
+		if err := s.templates.ExecuteTemplate(w, assetCreateResponse, data); err != nil {
 			s.internalError(w, "failed to execute template in server.create", err)
 			return
 		}

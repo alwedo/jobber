@@ -24,29 +24,41 @@ import (
 )
 
 type Jobber struct {
-	ctx    context.Context
-	scpr   scrape.Scraper
-	logger *slog.Logger
-	db     *db.Queries
-	sched  gocron.Scheduler
+	ctx     context.Context
+	scpr    scrape.Scraper
+	logger  *slog.Logger
+	db      *db.Queries
+	sched   gocron.Scheduler
+	timeOut time.Duration
 }
+
+var defaultTimeOut = 10 * time.Second
+
+var ErrTimedOut = errors.New("operation timed out")
+
+type Options func(*Jobber)
 
 func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
 	return NewConfigurableJobber(log, db, scrape.New(log))
 }
 
-func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (*Jobber, func()) {
+func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper, opts ...Options) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
 	}
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	j := &Jobber{
-		ctx:    ctx,
-		scpr:   s,
-		logger: log,
-		db:     db,
-		sched:  sched,
+		ctx:     ctx,
+		scpr:    s,
+		logger:  log,
+		db:      db,
+		sched:   sched,
+		timeOut: defaultTimeOut,
+	}
+
+	for _, o := range opts {
+		o(j)
 	}
 
 	// Initial job scheduling.
@@ -65,6 +77,12 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper) (
 		if err := j.sched.Shutdown(); err != nil {
 			j.logger.Error("failed to shutdown scheduler", slog.String("error", err.Error()))
 		}
+	}
+}
+
+func WithTimeOut(t time.Duration) Options {
+	return func(j *Jobber) {
+		j.timeOut = t
 	}
 }
 
@@ -109,8 +127,9 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	// Blocks and waits for the job to finish or for a timeout.
 	select {
 	case <-done:
-	case <-time.After(10 * time.Second):
+	case <-time.After(j.timeOut):
 		j.logger.Info("scheduleQuery in jobber.CreateQuery took more than 10 sec", slog.String("keywords", keywords), slog.String("location", location))
+		return ErrTimedOut
 	}
 
 	return nil
