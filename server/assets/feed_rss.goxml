@@ -19,7 +19,7 @@
   <description>{{.Keywords}} jobs in {{.Location}}</description>
   {{ range .Offers }}
   <item>
-    <title>{{title .}}</title>
+    <title>{{ .Title }} at {{ .Company }}</title>
     <link>{{.Url}}</link>
     <description
             ><![CDATA[
