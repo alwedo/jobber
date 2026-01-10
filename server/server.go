@@ -5,7 +5,6 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"html"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -248,9 +247,6 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 var funcMap = template.FuncMap{
 	"pubDate": func(o *db.Offer) string {
 		return o.PostedAt.Time.Format(time.RFC1123Z)
-	},
-	"title": func(o *db.Offer) string {
-		return html.EscapeString(o.Title + " at " + o.Company)
 	},
 	"postedAt": func(o *db.Offer) string {
 		return o.PostedAt.Time.Format("Jan 2")

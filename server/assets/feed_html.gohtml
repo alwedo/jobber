@@ -51,7 +51,7 @@
               <div class="details-wrapper">
                   {{ range .Offers }}
                       <details>
-                          <summary>{{title .}}</summary>
+                          <summary>{{ .Title }} at {{ .Company }}</summary>
                           <ul>
                               <li><b>Title:</b> {{ .Title }}</li>
                               <li><b>Company:</b> {{ .Company }}</li>
