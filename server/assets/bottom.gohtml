@@ -51,6 +51,12 @@ function getLocalStorageKey() {
 const feedItems = document.querySelectorAll(".details-wrapper details summary");
 const latestFeedItemOnPage = feedItems[0].innerText;
 
+const pageTitle = "rssjobs";
+const pageTitleNewJobs = (nrOfNewPosts) =>
+  `${pageTitle} - feed updated with ${nrOfNewPosts} ${
+    nrOfNewPosts === 1 ? "post" : "posts"
+  } `;
+
 function highlightLatestAdditions() {
   const latestFeedItemLocalStorage = localStorage.getItem(getLocalStorageKey());
 
@@ -58,6 +64,7 @@ function highlightLatestAdditions() {
     const indexOfLatestPost = Array.from(feedItems).findIndex(
       (item) => item.innerText === latestFeedItemLocalStorage
     );
+    document.title = pageTitleNewJobs(indexOfLatestPost);
 
     const nrOfNewItems =
       indexOfLatestPost !== -1 ? indexOfLatestPost : feedItems.length;
@@ -78,8 +85,13 @@ if (window.location.pathname === "/feeds") {
 
   const thirtyMinutes = 30 * 60 * 1000;
   setInterval(autoRefresh, thirtyMinutes);
-}
 
+  window.addEventListener("focus", () => {
+    document.title = pageTitle;
+  });
+} else {
+  window.removeEventListener("focus");
+}
 
 </script>
 
