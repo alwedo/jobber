@@ -45,10 +45,11 @@
         }
     }
     </style>
-    <p style="text-align: center"><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br></p>
+    <p style="text-align: center"><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b></p>
+    <p style="text-align: center">This page auto-refreshes every 30 minutes<br></p>
 
     <div class="container">
-              <div class="details-wrapper">
+              <div class="details-wrapper" aria-live="polite">
                   {{ range .Offers }}
                       <details>
                           <summary>{{ .Title }} at {{ .Company }}</summary>
