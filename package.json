@@ -1,0 +1,23 @@
+{
+  "name": "jobber",
+  "version": "1.0.0",
+  "description": "![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/alwedo/jobber) ![Test](https://github.com/alwedo/jobber/actions/workflows/test.yml/badge.svg)",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alvaroalonsobabbel/jobber.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Alvaroalonsobabbel/jobber/issues"
+  },
+  "homepage": "https://github.com/Alvaroalonsobabbel/jobber#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.8"
+  }
+}
