@@ -164,8 +164,8 @@ WITH q AS (
     WHERE id = $1
 ),
 ins AS (
-    INSERT INTO query_scraper_status (query_id, scraper_name, scraped_at)
-    SELECT q.id, $2, CURRENT_TIMESTAMP
+    INSERT INTO query_scraper_status (query_id, scraper_name)
+    SELECT q.id, $2
     FROM q
     WHERE NOT EXISTS (
         SELECT 1
