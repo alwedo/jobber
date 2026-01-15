@@ -71,3 +71,44 @@ ON CONFLICT (query_id, offer_id) DO NOTHING;
 -- name: DeleteOldOffers :exec
 DELETE FROM offers
 WHERE posted_at < NOW() - INTERVAL '7 days';
+
+-- name: GetQueryScraper :one
+WITH q AS (
+    SELECT *
+    FROM queries
+    WHERE id = $1
+),
+ins AS (
+    INSERT INTO query_scraper_status (query_id, scraper_name, scraped_at)
+    SELECT q.id, $2, CURRENT_TIMESTAMP
+    FROM q
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM query_scraper_status s
+        WHERE s.query_id = q.id
+          AND s.scraper_name = $2
+    )
+    RETURNING query_id, scraper_name, scraped_at
+),
+s AS (
+    SELECT query_id, scraper_name, scraped_at
+    FROM query_scraper_status
+    WHERE query_id = $1
+      AND scraper_name = $2
+
+    UNION ALL
+
+    SELECT query_id, scraper_name, scraped_at
+    FROM ins
+)
+SELECT
+    q.*,
+    s.scraped_at
+FROM q
+JOIN s ON s.query_id = q.id;
+
+-- name: UpdateQueryScrapedAt :exec
+UPDATE query_scraper_status
+SET scraped_at = CURRENT_TIMESTAMP
+WHERE query_id = $1
+  AND scraper_name = $2;

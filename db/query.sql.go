@@ -157,6 +157,72 @@ func (q *Queries) GetQueryByID(ctx context.Context, id int64) (*Query, error) {
 	return &i, err
 }
 
+const getQueryScraper = `-- name: GetQueryScraper :one
+WITH q AS (
+    SELECT id, keywords, location, created_at, queried_at, updated_at
+    FROM queries
+    WHERE id = $1
+),
+ins AS (
+    INSERT INTO query_scraper_status (query_id, scraper_name, scraped_at)
+    SELECT q.id, $2, CURRENT_TIMESTAMP
+    FROM q
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM query_scraper_status s
+        WHERE s.query_id = q.id
+          AND s.scraper_name = $2
+    )
+    RETURNING query_id, scraper_name, scraped_at
+),
+s AS (
+    SELECT query_id, scraper_name, scraped_at
+    FROM query_scraper_status
+    WHERE query_id = $1
+      AND scraper_name = $2
+
+    UNION ALL
+
+    SELECT query_id, scraper_name, scraped_at
+    FROM ins
+)
+SELECT
+    q.id, q.keywords, q.location, q.created_at, q.queried_at, q.updated_at,
+    s.scraped_at
+FROM q
+JOIN s ON s.query_id = q.id
+`
+
+type GetQueryScraperParams struct {
+	ID          int64
+	ScraperName string
+}
+
+type GetQueryScraperRow struct {
+	ID        int64
+	Keywords  string
+	Location  string
+	CreatedAt pgtype.Timestamptz
+	QueriedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	ScrapedAt pgtype.Timestamptz
+}
+
+func (q *Queries) GetQueryScraper(ctx context.Context, arg *GetQueryScraperParams) (*GetQueryScraperRow, error) {
+	row := q.db.QueryRow(ctx, getQueryScraper, arg.ID, arg.ScraperName)
+	var i GetQueryScraperRow
+	err := row.Scan(
+		&i.ID,
+		&i.Keywords,
+		&i.Location,
+		&i.CreatedAt,
+		&i.QueriedAt,
+		&i.UpdatedAt,
+		&i.ScrapedAt,
+	)
+	return &i, err
+}
+
 const listOffers = `-- name: ListOffers :many
 SELECT
     o.id, o.title, o.company, o.location, o.posted_at, o.created_at, o.source, o.url, o.description
@@ -244,6 +310,23 @@ WHERE
 
 func (q *Queries) UpdateQueryQAT(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, updateQueryQAT, id)
+	return err
+}
+
+const updateQueryScrapedAt = `-- name: UpdateQueryScrapedAt :exec
+UPDATE query_scraper_status
+SET scraped_at = CURRENT_TIMESTAMP
+WHERE query_id = $1
+  AND scraper_name = $2
+`
+
+type UpdateQueryScrapedAtParams struct {
+	QueryID     int64
+	ScraperName string
+}
+
+func (q *Queries) UpdateQueryScrapedAt(ctx context.Context, arg *UpdateQueryScrapedAtParams) error {
+	_, err := q.db.Exec(ctx, updateQueryScrapedAt, arg.QueryID, arg.ScraperName)
 	return err
 }
 
