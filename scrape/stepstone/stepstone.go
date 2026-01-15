@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	stepstoneName    = "Stepstone"
+	Name = "Stepstone"
+
 	stepstoneBaseURL = "https://www.stepstone.de"
 	// stepstonePublicAPIEndpoint accepts POST request with the requestBody below.
 	stepstonePublicAPIEndpoint = "/public-api/resultlist/unifiedResultlist"
@@ -74,7 +75,7 @@ func New(log *slog.Logger) *stepstone { //nolint: revive
 	return &stepstone{client: retryhttp.New(), logger: log}
 }
 
-func (s *stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
+func (s *stepstone) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	var totalOffers []db.CreateOfferParams
 	var totalCount int
 	var resp *response
@@ -98,7 +99,7 @@ func (s *stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOff
 				Location:    v.Location,
 				PostedAt:    v.DatePosted,
 				Description: v.TextSnippet,
-				Source:      stepstoneName,
+				Source:      Name,
 				Url:         stepstoneBaseURL + v.URL,
 			})
 		}
@@ -116,7 +117,7 @@ func (s *stepstone) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOff
 	return totalOffers[:totalCount], err
 }
 
-func (s *stepstone) fetchOffers(ctx context.Context, query *db.Query, page int) (*response, error) {
+func (s *stepstone) fetchOffers(ctx context.Context, query *db.GetQueryScraperRow, page int) (*response, error) {
 	// Stepstone expect the param page to be greather than 0.
 	if page < 1 {
 		return nil, fmt.Errorf("page must be greater than 0 in stepstone.fetchOffers")
@@ -138,10 +139,10 @@ func (s *stepstone) fetchOffers(ctx context.Context, query *db.Query, page int) 
 	qp.Add(paramSort, paramSortValueByAge)
 	qp.Add(paramPage, strconv.Itoa(page))
 	age := paramAgeValueAge7
-	// UpdatedAt is updated every time we run the query against Stepstone.
+	// ScrapedAt is updated every time we run the query against Stepstone.
 	// Since Stepstone only accepts either 1 or 7 days in the past, we check
 	// if the last query was less than one day ago.
-	if query.UpdatedAt.Valid && time.Since(query.UpdatedAt.Time) < 24*time.Hour {
+	if query.ScrapedAt.Valid && time.Since(query.ScrapedAt.Time) < 24*time.Hour {
 		age = paramAgeValueAge1
 	}
 	qp.Add(paramAge, age)

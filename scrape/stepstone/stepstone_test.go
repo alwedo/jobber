@@ -20,7 +20,7 @@ func TestScrape(t *testing.T) {
 	s := &stepstone{client: retryhttp.NewWithTransport(mockResp)}
 
 	t.Run("http request is correctly formed", func(t *testing.T) {
-		query := &db.Query{Keywords: "golang", Location: "the moon"}
+		query := &db.GetQueryScraperRow{Keywords: "golang", Location: "the moon"}
 		_, err := s.Scrape(context.Background(), query)
 		if err != nil {
 			t.Fatalf("expected error not to be nil, got %v", err)
@@ -49,7 +49,7 @@ func TestScrape(t *testing.T) {
 	})
 
 	t.Run("first time query returns a week of offers", func(t *testing.T) {
-		query := &db.Query{Keywords: "golang", Location: "the moon"}
+		query := &db.GetQueryScraperRow{Keywords: "golang", Location: "the moon"}
 		offers, err := s.Scrape(context.Background(), query)
 		if err != nil {
 			t.Fatalf("expected error not to be nil, got %v", err)
@@ -70,10 +70,10 @@ func TestScrape(t *testing.T) {
 	})
 
 	t.Run("subsequent query returns a day of offers", func(t *testing.T) {
-		query := &db.Query{
+		query := &db.GetQueryScraperRow{
 			Keywords:  "golang",
 			Location:  "the moon",
-			UpdatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			ScrapedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		}
 		offers, err := s.Scrape(context.Background(), query)
 		if err != nil {
