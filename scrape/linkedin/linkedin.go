@@ -96,7 +96,7 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.GetQueryScrape
 	// If the query has a valid UpdateAt field we don't use the default f_TPR
 	// value (a week) but the time difference between the last query and now.
 	if query.ScrapedAt.Valid {
-		ftpr = int(time.Since(query.UpdatedAt.Time).Seconds())
+		ftpr = int(time.Since(query.ScrapedAt.Time).Seconds())
 	}
 	qp.Add(paramFTPR, fmt.Sprintf("r%d", ftpr))
 
