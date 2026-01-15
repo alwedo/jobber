@@ -19,15 +19,16 @@ import (
 )
 
 const (
+	Name = "LinkedIn"
+
 	linkedInURL      = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 	linkedInBaseURL  = "https://www.linkedin.com/jobs/view/" // Direct link to job posting
-	linkedInName     = "LinkedIn"
-	paramKeywords    = "keywords" // Search keywords, ie. "golang"
-	paramLocation    = "location" // Location of the search, ie. "Berlin"
-	paramStart       = "start"    // Start of the pagination, in intervals of 10s, ie. "10"
-	paramFTPR        = "f_TPR"    // Time Posted Range. Values are in seconds, starting with 'r', ie. r86400 = Past 24 hours
-	searchInterval   = 10         // LinkedIn pagination interval
-	maxSearchInt     = 1000       // LinkedIn's site returns StatusBadRequest if 'start=1000'
+	paramKeywords    = "keywords"                            // Search keywords, ie. "golang"
+	paramLocation    = "location"                            // Location of the search, ie. "Berlin"
+	paramStart       = "start"                               // Start of the pagination, in intervals of 10s, ie. "10"
+	paramFTPR        = "f_TPR"                               // Time Posted Range. Values are in seconds, starting with 'r', ie. r86400 = Past 24 hours
+	searchInterval   = 10                                    // LinkedIn pagination interval
+	maxSearchInt     = 1000                                  // LinkedIn's site returns StatusBadRequest if 'start=1000'
 	oneWeekInSeconds = 604800
 )
 
@@ -43,7 +44,7 @@ func New(l *slog.Logger) *linkedIn { //nolint: revive
 // search runs a linkedin search based on a query.
 // It will paginate over the search results until it doesn't find any more offers,
 // Scrape the data and return a slice of offers ready to be added to the DB.
-func (l *linkedIn) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOfferParams, error) {
+func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	t := time.Now()
 	var totalOffers []db.CreateOfferParams
 	var offers []db.CreateOfferParams
@@ -71,7 +72,7 @@ func (l *linkedIn) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOffe
 		}
 	}
 	metrics.ScraperJob.WithLabelValues(
-		linkedInName,
+		Name,
 		query.Keywords,
 		query.Location,
 		strconv.Itoa(len(totalOffers)),
@@ -82,7 +83,7 @@ func (l *linkedIn) Scrape(ctx context.Context, query *db.Query) ([]db.CreateOffe
 
 // fetchOffersPage gets job offers from LinkedIn based on the passed query params.
 // This returns a list of max 10 elements. We move the start by increments of 10.
-func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start int) (io.ReadCloser, error) {
+func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.GetQueryScraperRow, start int) (io.ReadCloser, error) {
 	qp := url.Values{}
 	qp.Add(paramKeywords, query.Keywords)
 	qp.Add(paramLocation, query.Location)
@@ -91,10 +92,10 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.Query, start i
 	}
 	ftpr := oneWeekInSeconds
 
-	// UpdatedAt is updated every time we run the query against LinkedIn.
+	// ScrapedAt is updated every time we run the query against LinkedIn.
 	// If the query has a valid UpdateAt field we don't use the default f_TPR
 	// value (a week) but the time difference between the last query and now.
-	if query.UpdatedAt.Valid {
+	if query.ScrapedAt.Valid {
 		ftpr = int(time.Since(query.UpdatedAt.Time).Seconds())
 	}
 	qp.Add(paramFTPR, fmt.Sprintf("r%d", ftpr))
@@ -131,7 +132,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 	doc.Find("li").Each(func(_ int, s *goquery.Selection) {
 		// Check if this li contains a job card
 		if s.Find(".base-search-card").Length() > 0 {
-			job := db.CreateOfferParams{Source: linkedInName}
+			job := db.CreateOfferParams{Source: Name}
 
 			// Extract Job ID from data-entity-urn
 			if urn, exists := s.Find("[data-entity-urn]").Attr("data-entity-urn"); exists {
