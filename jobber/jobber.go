@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"log/slog"
 	"time"
@@ -25,7 +26,7 @@ import (
 
 type Jobber struct {
 	ctx     context.Context
-	scpr    scrape.Scraper
+	scrList scrape.List
 	logger  *slog.Logger
 	db      *db.Queries
 	sched   gocron.Scheduler
@@ -42,7 +43,7 @@ func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
 	return NewConfigurableJobber(log, db, scrape.New(log))
 }
 
-func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper, opts ...Options) (*Jobber, func()) {
+func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opts ...Options) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
@@ -50,7 +51,7 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, s scrape.Scraper, o
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	j := &Jobber{
 		ctx:     ctx,
-		scpr:    s,
+		scrList: sl,
 		logger:  log,
 		db:      db,
 		sched:   sched,
@@ -86,7 +87,7 @@ func WithTimeOut(t time.Duration) Options {
 	}
 }
 
-// CreateQuery creates a new query and schedules it.
+// CreateQuery creates a new query, runs it immediately and schedules it for future runs.
 // If the query already exists the creation will be ignored.
 func (j *Jobber) CreateQuery(keywords, location string) error {
 	query, err := j.db.CreateQuery(j.ctx, &db.CreateQueryParams{
@@ -111,16 +112,22 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	// After creating a new query we schedule it and run it immediately
 	// so the feed has initial data. In the frontend we use a spinner
 	// with htmx while this is being processed.
-	done := make(chan struct{}, 1)
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+
+	wg.Add(len(j.scrList))
+
 	o := []gocron.JobOption{
 		gocron.WithStartAt(gocron.WithStartImmediately()),
 		gocron.WithEventListeners(gocron.AfterJobRuns(func(uuid.UUID, string) {
-			select {
-			case done <- struct{}{}:
-			default:
-			}
+			wg.Done()
 		})),
 	}
+
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
 
 	j.scheduleQuery(query, o...)
 
@@ -153,8 +160,14 @@ func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.
 	return o, &q.UpdatedAt, nil
 }
 
-func (j *Jobber) runQuery(qID int64) {
-	q, err := j.db.GetQueryByID(j.ctx, qID)
+func (j *Jobber) runQuery(qID int64, scraperName string) {
+	s, ok := j.scrList[scraperName]
+	if !ok {
+		j.logger.Error("unable to find scraper in jobber.runQuery", slog.Int64("queryID", qID), slog.String("scraper", scraperName))
+		return
+	}
+
+	q, err := j.db.GetQueryScraper(j.ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: scraperName})
 	if err != nil {
 		j.logger.Error("unable to get query in jobber.runQuery", slog.Int64("queryID", qID), slog.String("error", err.Error()))
 		return
@@ -172,10 +185,10 @@ func (j *Jobber) runQuery(qID int64) {
 		return
 	}
 
-	offers, err := j.scpr.Scrape(j.ctx, q)
+	offers, err := s.Scrape(j.ctx, q)
 	if err != nil {
-		// Errors in scrapers are logged but we continue processing since
-		// at the moment we don't have a way to differentiate errors per scraper.
+		// Errors in scrapers are logged but we continue processing since it can return partial results.
+		// Errors will be displayed in the logs and have to be investigated per case.
 		j.logger.Error("scrape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
 
@@ -192,11 +205,7 @@ func (j *Jobber) runQuery(qID int64) {
 				j.logger.Error("unable to create query offer association in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 			}
 		}
-		// TODO: Update Query will update the time even if there was a retryable error
-		// from the scraper sources. This could lead to missing offers due to update gaps.
-		// We need a better way to disassociate updated times from scrapers or even have a
-		// different approach on how queries relate to sources.
-		if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
+		if err := j.db.UpdateQueryScrapedAt(j.ctx, &db.UpdateQueryScrapedAtParams{QueryID: qID, ScraperName: scraperName}); err != nil {
 			j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 		}
 	}
@@ -205,22 +214,29 @@ func (j *Jobber) runQuery(qID int64) {
 }
 
 func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
-	opts := []gocron.JobOption{gocron.WithTags(q.Keywords + q.Location)}
-	opts = append(opts, o...)
+	// Schedules the query for every scraper.
+	for name := range j.scrList {
+		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, name)}
+		opts = append(opts, o...)
+		cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute())
 
-	cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute())
-	job, err := j.sched.NewJob(
-		gocron.CronJob(cron, false),
-		gocron.NewTask(func(q int64) { j.runQuery(q) }, q.ID),
-		opts...,
-	)
-	if err != nil {
-		j.logger.Error("unable to schedule query in jobber.scheduleQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
-		return
+		job, err := j.sched.NewJob(
+			gocron.CronJob(cron, false),
+			gocron.NewTask(func(q int64) { j.runQuery(q, name) }, q.ID),
+			opts...,
+		)
+		if err != nil {
+			j.logger.Error("unable to schedule query in jobber.scheduleQuery",
+				slog.Int64("queryID", q.ID),
+				slog.String("scraper", name),
+				slog.String("error", err.Error()),
+			)
+			continue
+		}
+
+		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+name, cron).Inc()
+		j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 	}
-
-	metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, cron).Inc()
-	j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 }
 
 func (j *Jobber) schedDeleteOldOffers() {
