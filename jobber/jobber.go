@@ -210,7 +210,12 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 		}
 	}
 
-	j.logger.Debug("successfuly completed jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("keywords", q.Keywords), slog.String("location", q.Location))
+	j.logger.Debug("successfuly completed jobber.runQuery",
+		slog.Int64("queryID", q.ID),
+		slog.String("keywords", q.Keywords),
+		slog.String("location", q.Location),
+		slog.String("scraper", scraperName),
+	)
 }
 
 func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
