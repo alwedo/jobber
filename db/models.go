@@ -33,3 +33,9 @@ type QueryOffer struct {
 	QueryID int64
 	OfferID string
 }
+
+type QueryScraperStatus struct {
+	QueryID     int64
+	ScraperName string
+	ScrapedAt   pgtype.Timestamptz
+}

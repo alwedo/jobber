@@ -24,7 +24,7 @@ func TestFetchOffersPage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("first time query", func(t *testing.T) {
-		query := &db.Query{
+		query := &db.GetQueryScraperRow{
 			Keywords: "golang",
 			Location: "the moon",
 		}
@@ -68,10 +68,10 @@ func TestFetchOffersPage(t *testing.T) {
 	})
 
 	t.Run("queries with UpdatedAt field should have relative FTPR", func(t *testing.T) {
-		query := &db.Query{
+		query := &db.GetQueryScraperRow{
 			Keywords:  "golang",
 			Location:  "the moon",
-			UpdatedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().Add(-time.Hour)},
+			ScrapedAt: pgtype.Timestamptz{Valid: true, Time: time.Now().Add(-time.Hour)},
 		}
 		resp, err := l.fetchOffersPage(ctx, query, 0)
 		if err != nil {
@@ -87,7 +87,7 @@ func TestFetchOffersPage(t *testing.T) {
 	t.Run("retryable cases", func(t *testing.T) {
 		t.Run("working exponential backoff", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				query := &db.Query{
+				query := &db.GetQueryScraperRow{
 					Keywords: "retry", // retry keyword makes mock to return 429
 					Location: "the moon",
 				}
@@ -106,7 +106,7 @@ func TestFetchOffersPage(t *testing.T) {
 		})
 		t.Run("exhausted exponential backoff", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				query := &db.Query{
+				query := &db.GetQueryScraperRow{
 					// retry-fail keyword makes mock to return 429 all the time after the first call.
 					Keywords: "retry-fail",
 					Location: "the moon",
@@ -186,7 +186,7 @@ func TestScrape(t *testing.T) {
 
 	t.Run("expected behaviour", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
-			query := &db.Query{Keywords: "golang", Location: "the moon"}
+			query := &db.GetQueryScraperRow{Keywords: "golang", Location: "the moon"}
 			offers, err := l.Scrape(context.Background(), query)
 			if err != nil {
 				t.Errorf("expected no error, got %v", err)
@@ -199,7 +199,7 @@ func TestScrape(t *testing.T) {
 	})
 	t.Run("too many retries don't discard data", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
-			query := &db.Query{Keywords: "retry-fail", Location: "the moon"}
+			query := &db.GetQueryScraperRow{Keywords: "retry-fail", Location: "the moon"}
 			offers, err := l.Scrape(context.Background(), query)
 			if !errors.Is(err, retryhttp.ErrRetryable) {
 				t.Errorf("expected ErrRetryable, got: %v", err)
