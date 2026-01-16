@@ -151,7 +151,7 @@ if (window.location.pathname === "/feeds") {
   const thirtyMinutes = 30 * 60 * 1000;
   setInterval(autoRefresh, thirtyMinutes);
 
-  window.addEventListener("onLoad", () => {
+  window.addEventListener("load", () => {
     highlightLatestAdditions();
     localStorage.setItem(getLocalStorageKey(), latestFeedItemOnPage);
   });
