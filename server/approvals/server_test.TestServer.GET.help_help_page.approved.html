@@ -229,21 +229,23 @@ function highlightLatestAdditions() {
 }
 
 function autoRefresh() {
-  window.location = window.location.href;
+  location.reload();
 }
 
 if (window.location.pathname === "/feeds") {
-  highlightLatestAdditions();
-  localStorage.setItem(getLocalStorageKey(), latestFeedItemOnPage);
-
   const thirtyMinutes = 30 * 60 * 1000;
   setInterval(autoRefresh, thirtyMinutes);
 
+  window.addEventListener("onLoad", () => {
+    highlightLatestAdditions();
+    localStorage.setItem(getLocalStorageKey(), latestFeedItemOnPage);
+  });
   window.addEventListener("focus", () => {
     document.title = pageTitle;
   });
 } else {
   window.removeEventListener("focus");
+  window.removeEventListener("onLoad");
 }
 
 </script>
