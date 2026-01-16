@@ -142,9 +142,9 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	return nil
 }
 
-// ListOffers return the list of offers posted in the last 7 days for a
-// given query's keywords and location.
-// If the query doesn't exist, a sql.ErrNoRows will be returned.
+// ListOffers return the list of offers for a given query's keywords
+// and location and the last time the query was updated to calculate
+// the Cache-Control header. Returns sql.ErrNoRows for non-existent query.
 func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.Offer, *pgtype.Timestamptz, error) {
 	q, err := j.db.GetQuery(ctx, gqp)
 	if err != nil {
@@ -205,9 +205,13 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 				j.logger.Error("unable to create query offer association in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 			}
 		}
-		if err := j.db.UpdateQueryScrapedAt(j.ctx, &db.UpdateQueryScrapedAtParams{QueryID: qID, ScraperName: scraperName}); err != nil {
-			j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+		if err := j.db.UpdateQueryScrapedAt(j.ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: scraperName}); err != nil {
+			j.logger.Error("unable to update scraper timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 		}
+	}
+
+	if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
+		j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
 	}
 
 	j.logger.Debug("successfuly completed jobber.runQuery",
