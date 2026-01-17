@@ -207,6 +207,26 @@ func TestServer(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 			wantBodyString: "404 page not found\n",
 		},
+		{
+			name:           "static/style.css",
+			path:           "/static/style.css",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusOK,
+			wantBodyString: ".somecss\n", // Change for wantBodyAssert: "css" if it makes sense
+		},
+		{
+			name:           "static/script.js",
+			path:           "/static/script.js",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusOK,
+			wantBodyString: "somejs;\n", // Change for wantBodyAssert: "js" if it makes sense
+		},
+		{
+			name:       "static/notfound",
+			path:       "/static/cuak",
+			method:     http.MethodGet,
+			wantStatus: http.StatusNotFound,
+		},
 	}
 
 	for _, tt := range tests {

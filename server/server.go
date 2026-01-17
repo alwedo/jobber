@@ -21,7 +21,10 @@ import (
 )
 
 const (
-	// Params.
+	// Path Params.
+	pathParamStatic = "static"
+
+	// Query Params.
 	queryParamKeywords = "keywords"
 	queryParamLocation = "location"
 
@@ -36,6 +39,12 @@ const (
 
 //go:embed assets/*
 var assets embed.FS
+
+//go:embed static/script.js
+var script string
+
+//go:embed static/style.css
+var style string
 
 type server struct {
 	logger    *slog.Logger
@@ -55,6 +64,7 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("GET /help", s.help())
 	mux.HandleFunc("/", s.index())
+	mux.HandleFunc("GET /static/{static}", s.static())
 
 	return &http.Server{
 		Addr:              ":80",
@@ -195,6 +205,26 @@ func (s *server) feed() http.HandlerFunc {
 			Offers:   offers,
 		}); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
+			return
+		}
+	}
+}
+
+func (s *server) static() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var static string
+		switch r.PathValue(pathParamStatic) {
+		case "style.css":
+			static = style
+		case "script.js":
+			static = script
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		_, err := fmt.Fprint(w, static)
+		if err != nil {
+			s.internalError(w, "failed to execute style.css file", err)
 			return
 		}
 	}
