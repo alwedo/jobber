@@ -9,9 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/alwedo/jobber/db"
@@ -33,17 +32,23 @@ type Jobber struct {
 	timeOut time.Duration
 }
 
-var defaultTimeOut = 10 * time.Second
-
 var ErrTimedOut = errors.New("operation timed out")
 
 type Options func(*Jobber)
 
-func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
-	return NewConfigurableJobber(log, db, scrape.New(log))
+func WithTimeOut(t time.Duration) Options {
+	return func(j *Jobber) {
+		j.timeOut = t
+	}
 }
 
-func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opts ...Options) (*Jobber, func()) {
+func WithScrapeList(sl scrape.List) Options {
+	return func(j *Jobber) {
+		j.scrList = sl
+	}
+}
+
+func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
@@ -51,11 +56,11 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opt
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	j := &Jobber{
 		ctx:     ctx,
-		scrList: sl,
+		scrList: scrape.New(log),
 		logger:  log,
 		db:      db,
 		sched:   sched,
-		timeOut: defaultTimeOut,
+		timeOut: 10 * time.Second,
 	}
 
 	for _, o := range opts {
@@ -78,12 +83,6 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opt
 		if err := j.sched.Shutdown(); err != nil {
 			j.logger.Error("failed to shutdown scheduler", slog.String("error", err.Error()))
 		}
-	}
-}
-
-func WithTimeOut(t time.Duration) Options {
-	return func(j *Jobber) {
-		j.timeOut = t
 	}
 }
 
@@ -113,33 +112,28 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	// so the feed has initial data. In the frontend we use a spinner
 	// with htmx while this is being processed.
 	done := make(chan struct{})
-	var wg sync.WaitGroup
-
-	wg.Add(len(j.scrList))
+	var tasks atomic.Int64
+	tasks.Store(int64(len(j.scrList)))
 
 	o := []gocron.JobOption{
 		gocron.WithStartAt(gocron.WithStartImmediately()),
 		gocron.WithEventListeners(gocron.AfterJobRuns(func(uuid.UUID, string) {
-			wg.Done()
+			if tasks.Add(-1) == 0 {
+				close(done)
+			}
 		})),
 	}
-
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
 
 	j.scheduleQuery(query, o...)
 
 	// Blocks and waits for the job to finish or for a timeout.
 	select {
 	case <-done:
+		return nil
 	case <-time.After(j.timeOut):
 		j.logger.Info("scheduleQuery in jobber.CreateQuery took more than 10 sec", slog.String("keywords", keywords), slog.String("location", location))
 		return ErrTimedOut
 	}
-
-	return nil
 }
 
 // ListOffers return the list of offers for a given query's keywords
@@ -249,9 +243,8 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 }
 
 func (j *Jobber) schedDeleteOldOffers() {
-	at := "0 2 * * *" // Every day at 2:00 am.
 	_, err := j.sched.NewJob(
-		gocron.CronJob(at, false),
+		gocron.CronJob("0 2 * * *", false), // Every day at 2:00 am.
 		gocron.NewTask(func() {
 			if err := j.db.DeleteOldOffers(j.ctx); err != nil {
 				j.logger.Error("unable to delete old offers", slog.String("error", err.Error()))

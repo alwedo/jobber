@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/linkedin"
@@ -30,18 +31,21 @@ func New(l *slog.Logger) List {
 }
 
 var (
-	MockScraper        = &mockScraper{}
-	MockScraperWithErr = &mockScraper{mockErr: fmt.Errorf("error")}
-	MockScraperList    = List{"Mock": MockScraper}
+	Mock          = &mock{}
+	MockWithErr   = &mock{mockErr: fmt.Errorf("error")}
+	MockWithDelay = &mock{delay: 150 * time.Millisecond}
+	MockList      = List{"Mock": Mock}
 )
 
-type mockScraper struct {
+type mock struct {
 	LastQuery *db.GetQueryScraperRow
 	mockErr   error
+	delay     time.Duration
 }
 
-func (m *mockScraper) Scrape(_ context.Context, q *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
+func (m *mock) Scrape(_ context.Context, q *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	m.LastQuery = q
+	time.Sleep(m.delay)
 	if m.mockErr != nil {
 		return nil, m.mockErr
 	}

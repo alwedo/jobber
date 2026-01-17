@@ -211,7 +211,8 @@ func TestServer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.method+tt.path+" "+tt.name, func(t *testing.T) {
-			j, jCloser := jobber.NewConfigurableJobber(l, d, scrape.MockScraperList, tt.jobberOpts...)
+			tt.jobberOpts = append(tt.jobberOpts, jobber.WithScrapeList(scrape.MockList))
+			j, jCloser := jobber.New(l, d, tt.jobberOpts...)
 			defer jCloser()
 			svr, err := New(l, j)
 			if err != nil {
