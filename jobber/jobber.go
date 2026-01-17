@@ -38,11 +38,19 @@ var ErrTimedOut = errors.New("operation timed out")
 
 type Options func(*Jobber)
 
-func New(log *slog.Logger, db *db.Queries) (*Jobber, func()) {
-	return NewConfigurableJobber(log, db, scrape.New(log))
+func WithTimeOut(t time.Duration) Options {
+	return func(j *Jobber) {
+		j.timeOut = t
+	}
 }
 
-func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opts ...Options) (*Jobber, func()) {
+func WithScrapeList(sl scrape.List) Options {
+	return func(j *Jobber) {
+		j.scrList = sl
+	}
+}
+
+func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
@@ -50,7 +58,7 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opt
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	j := &Jobber{
 		ctx:     ctx,
-		scrList: sl,
+		scrList: scrape.New(log),
 		logger:  log,
 		db:      db,
 		sched:   sched,
@@ -77,12 +85,6 @@ func NewConfigurableJobber(log *slog.Logger, db *db.Queries, sl scrape.List, opt
 		if err := j.sched.Shutdown(); err != nil {
 			j.logger.Error("failed to shutdown scheduler", slog.String("error", err.Error()))
 		}
-	}
-}
-
-func WithTimeOut(t time.Duration) Options {
-	return func(j *Jobber) {
-		j.timeOut = t
 	}
 }
 

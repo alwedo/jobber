@@ -18,7 +18,7 @@ func TestConstructor(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraperList)
+	j, jCloser := New(l, d, WithScrapeList(scrape.MockScraperList))
 	defer jCloser()
 
 	// Give the scheduler time to process initial jobs.
@@ -48,10 +48,10 @@ func TestCreateQuery(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := NewConfigurableJobber(l, d, scrape.List{
+	j, jCloser := New(l, d, WithScrapeList(scrape.List{
 		"mock":  scrape.MockScraper,
 		"mock2": scrape.MockScraper,
-	})
+	}))
 	defer jCloser()
 
 	t.Run("creates a query", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestCreateWithTimeOut(t *testing.T) {
 		"mock2": scrape.MockScraper,
 		"mock3": scrape.MockScraperWithErr,
 	}
-	j, jCloser := NewConfigurableJobber(l, d, sl, WithTimeOut(time.Nanosecond))
+	j, jCloser := New(l, d, WithScrapeList(sl), WithTimeOut(time.Nanosecond))
 	defer jCloser()
 	err := j.CreateQuery("cuak", "squeek")
 	if !errors.Is(err, ErrTimedOut) {
@@ -138,7 +138,7 @@ func TestListOffers(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraperList)
+	j, jCloser := New(l, d, WithScrapeList(scrape.MockScraperList))
 	defer jCloser()
 
 	// Give the scheduler time to process initial jobs.
@@ -199,7 +199,7 @@ func TestRunQuery(t *testing.T) {
 	defer dbCloser()
 	mockScraperName := "Mock"
 	mockScraper := scrape.MockScraper
-	j, jCloser := NewConfigurableJobber(l, d, scrape.List{mockScraperName: mockScraper})
+	j, jCloser := New(l, d, WithScrapeList(scrape.List{mockScraperName: mockScraper}))
 	defer jCloser()
 
 	t.Run("with valid query", func(t *testing.T) {
