@@ -95,7 +95,7 @@ func TestCreateQuery(t *testing.T) {
 			t.Fatalf("failed to list queries: %s", err)
 		}
 		if len(q) != 5 { // 4 from the seed + last test.
-			t.Errorf("expected number of queries to be 4, got %d", len(q))
+			t.Errorf("expected number of queries to be 5, got %d", len(q))
 		}
 		wantJobs := 11 // 4 from the seed x2  + last test x2 + old offers deletetion.
 		gotJobs := len(j.sched.Jobs())
@@ -109,11 +109,28 @@ func TestCreateWithTimeOut(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := NewConfigurableJobber(l, d, scrape.MockScraperList, WithTimeOut(time.Nanosecond))
+	sl := scrape.List{
+		"mock":  scrape.MockScraperWithDelay,
+		"mock2": scrape.MockScraper,
+		"mock3": scrape.MockScraperWithErr,
+	}
+	j, jCloser := NewConfigurableJobber(l, d, sl, WithTimeOut(time.Nanosecond))
 	defer jCloser()
 	err := j.CreateQuery("cuak", "squeek")
 	if !errors.Is(err, ErrTimedOut) {
 		t.Errorf("wanted err to be ErrTimedOut, got: %v", err)
+	}
+
+	// Ensure new tasks were run immediately by checking if they
+	// were performed within the last second.
+	time.Sleep(200 * time.Millisecond)
+	for _, jb := range j.sched.Jobs() {
+		if slices.Contains(jb.Tags(), "cuaksqueek") {
+			lr, _ := jb.LastRun() //nolint: errcheck
+			if lr.Before(time.Now().Add(-time.Second)) {
+				t.Errorf("expected created query to have been performed immediately, got %v", lr)
+			}
+		}
 	}
 }
 

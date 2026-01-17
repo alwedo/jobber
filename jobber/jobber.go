@@ -9,9 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/alwedo/jobber/db"
@@ -113,33 +112,28 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	// so the feed has initial data. In the frontend we use a spinner
 	// with htmx while this is being processed.
 	done := make(chan struct{})
-	var wg sync.WaitGroup
-
-	wg.Add(len(j.scrList))
+	var tasks atomic.Int64
+	tasks.Store(int64(len(j.scrList)))
 
 	o := []gocron.JobOption{
 		gocron.WithStartAt(gocron.WithStartImmediately()),
 		gocron.WithEventListeners(gocron.AfterJobRuns(func(uuid.UUID, string) {
-			wg.Done()
+			if tasks.Add(-1) == 0 {
+				close(done)
+			}
 		})),
 	}
-
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
 
 	j.scheduleQuery(query, o...)
 
 	// Blocks and waits for the job to finish or for a timeout.
 	select {
 	case <-done:
+		return nil
 	case <-time.After(j.timeOut):
 		j.logger.Info("scheduleQuery in jobber.CreateQuery took more than 10 sec", slog.String("keywords", keywords), slog.String("location", location))
 		return ErrTimedOut
 	}
-
-	return nil
 }
 
 // ListOffers return the list of offers for a given query's keywords
