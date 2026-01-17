@@ -18,7 +18,7 @@ func TestConstructor(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := New(l, d, WithScrapeList(scrape.MockScraperList))
+	j, jCloser := New(l, d, WithScrapeList(scrape.MockList))
 	defer jCloser()
 
 	// Give the scheduler time to process initial jobs.
@@ -49,8 +49,8 @@ func TestCreateQuery(t *testing.T) {
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
 	j, jCloser := New(l, d, WithScrapeList(scrape.List{
-		"mock":  scrape.MockScraper,
-		"mock2": scrape.MockScraper,
+		"mock":  scrape.Mock,
+		"mock2": scrape.Mock,
 	}))
 	defer jCloser()
 
@@ -110,9 +110,9 @@ func TestCreateWithTimeOut(t *testing.T) {
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
 	sl := scrape.List{
-		"mock":  scrape.MockScraperWithDelay,
-		"mock2": scrape.MockScraper,
-		"mock3": scrape.MockScraperWithErr,
+		"mock":  scrape.MockWithDelay,
+		"mock2": scrape.Mock,
+		"mock3": scrape.MockWithErr,
 	}
 	j, jCloser := New(l, d, WithScrapeList(sl), WithTimeOut(time.Nanosecond))
 	defer jCloser()
@@ -138,7 +138,7 @@ func TestListOffers(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := New(l, d, WithScrapeList(scrape.MockScraperList))
+	j, jCloser := New(l, d, WithScrapeList(scrape.MockList))
 	defer jCloser()
 
 	// Give the scheduler time to process initial jobs.
@@ -198,7 +198,7 @@ func TestRunQuery(t *testing.T) {
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
 	mockScraperName := "Mock"
-	mockScraper := scrape.MockScraper
+	mockScraper := scrape.Mock
 	j, jCloser := New(l, d, WithScrapeList(scrape.List{mockScraperName: mockScraper}))
 	defer jCloser()
 
