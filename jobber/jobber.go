@@ -86,8 +86,9 @@ func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	}
 }
 
-// CreateQuery creates a new query, runs it immediately and schedules it for future runs.
-// If the query already exists the creation will be ignored.
+// CreateQuery creates a new query, schedules it for future runs
+// and also runs it immediately. While running it immediately it
+// will block the caller until the job finishes or it times out.
 func (j *Jobber) CreateQuery(keywords, location string) error {
 	query, err := j.db.CreateQuery(j.ctx, &db.CreateQueryParams{
 		Keywords: keywords,
@@ -108,9 +109,6 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 	)
 	metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
 
-	// After creating a new query we schedule it and run it immediately
-	// so the feed has initial data. In the frontend we use a spinner
-	// with htmx while this is being processed.
 	done := make(chan struct{})
 	var tasks atomic.Int64
 	tasks.Store(int64(len(j.scrList)))
@@ -181,9 +179,18 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 
 	offers, err := s.Scrape(j.ctx, q)
 	if err != nil {
-		// Errors in scrapers are logged but we continue processing since it can return partial results.
-		// Errors will be displayed in the logs and have to be investigated per case.
-		j.logger.Error("scrape in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+		j.logger.Error("scrape in jobber.runQuery",
+			slog.Int64("queryID", q.ID),
+			slog.String("keywords", q.Keywords),
+			slog.String("location", q.Location),
+			slog.String("scraper", scraperName),
+			slog.String("error", err.Error()),
+		)
+		// We only return after an error if there are no offers since
+		// some cases (ie, too many requests) will have partial results.
+		if len(offers) == 0 {
+			return
+		}
 	}
 
 	if len(offers) > 0 {
