@@ -32,8 +32,6 @@ type Jobber struct {
 	timeOut time.Duration
 }
 
-var defaultTimeOut = 10 * time.Second
-
 var ErrTimedOut = errors.New("operation timed out")
 
 type Options func(*Jobber)
@@ -62,7 +60,7 @@ func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 		logger:  log,
 		db:      db,
 		sched:   sched,
-		timeOut: defaultTimeOut,
+		timeOut: 10 * time.Second,
 	}
 
 	for _, o := range opts {
@@ -245,9 +243,8 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 }
 
 func (j *Jobber) schedDeleteOldOffers() {
-	at := "0 2 * * *" // Every day at 2:00 am.
 	_, err := j.sched.NewJob(
-		gocron.CronJob(at, false),
+		gocron.CronJob("0 2 * * *", false), // Every day at 2:00 am.
 		gocron.NewTask(func() {
 			if err := j.db.DeleteOldOffers(j.ctx); err != nil {
 				j.logger.Error("unable to delete old offers", slog.String("error", err.Error()))
