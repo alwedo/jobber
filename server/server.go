@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -28,23 +29,20 @@ const (
 	queryParamKeywords = "keywords"
 	queryParamLocation = "location"
 
-	// Assets.
-	assetsGlob          = "assets/*"
-	assetIndex          = "index.gohtml"
-	assetHelp           = "help.gohtml"
-	assetFeedRSS        = "feed_rss.goxml"
-	assetFeedHTML       = "feed_html.gohtml"
-	assetCreateResponse = "create_response.gohtml"
+	// Static assets.
+	assetStyle  = "assets/css/style.css"
+	assetScript = "assets/js/script.js"
+
+	// Templates.
+	tmplIndex          = "index.gohtml"
+	tmplHelp           = "help.gohtml"
+	tmplFeedRSS        = "feed_rss.goxml"
+	tmplFeedHTML       = "feed_html.gohtml"
+	tmplCreateResponse = "create_response.gohtml"
 )
 
 //go:embed assets/*
 var assets embed.FS
-
-//go:embed static/script.js
-var script string
-
-//go:embed static/style.css
-var style string
 
 type server struct {
 	logger    *slog.Logger
@@ -53,9 +51,9 @@ type server struct {
 }
 
 func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
-	t, err := template.New("").Funcs(funcMap).ParseFS(assets, assetsGlob)
+	t, err := template.New("").Funcs(funcMap).ParseFS(assets, "assets/templates/*")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to parse templates: %v", err)
 	}
 	s := &server{logger: l, jobber: j, templates: t}
 	mux := http.NewServeMux()
@@ -63,7 +61,7 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	mux.HandleFunc("POST /feeds", s.create())
 	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("GET /help", s.help())
-	mux.HandleFunc("/", s.index())
+	mux.HandleFunc("GET /", s.index())
 	mux.HandleFunc("GET /static/{static}", s.static())
 
 	return &http.Server{
@@ -79,7 +77,7 @@ func (s *server) index() http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		if err := s.templates.ExecuteTemplate(w, assetIndex, nil); err != nil {
+		if err := s.templates.ExecuteTemplate(w, tmplIndex, nil); err != nil {
 			s.internalError(w, "failed to execute template in server.index", err)
 			return
 		}
@@ -88,7 +86,7 @@ func (s *server) index() http.HandlerFunc {
 
 func (s *server) help() http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		if err := s.templates.ExecuteTemplate(w, assetHelp, nil); err != nil {
+		if err := s.templates.ExecuteTemplate(w, tmplHelp, nil); err != nil {
 			s.internalError(w, "failed to execute template in server.help", err)
 			return
 		}
@@ -129,7 +127,7 @@ func (s *server) create() http.HandlerFunc {
 			TimedOut bool
 		}{u.String(), timedOut}
 
-		if err := s.templates.ExecuteTemplate(w, assetCreateResponse, data); err != nil {
+		if err := s.templates.ExecuteTemplate(w, tmplCreateResponse, data); err != nil {
 			s.internalError(w, "failed to execute template in server.create", err)
 			return
 		}
@@ -190,10 +188,10 @@ func (s *server) feed() http.HandlerFunc {
 		// from a browser, otherwise it's an RSS reader.
 		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
 		case true:
-			tmpl = assetFeedHTML
+			tmpl = tmplFeedHTML
 			w.Header().Add("Content-Type", "text/html")
 		default:
-			tmpl = assetFeedRSS
+			tmpl = tmplFeedRSS
 			w.Header().Add("Content-Type", "application/rss+xml")
 		}
 
@@ -212,19 +210,34 @@ func (s *server) feed() http.HandlerFunc {
 
 func (s *server) static() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var static string
+		var a string
+		var ct string
+
 		switch r.PathValue(pathParamStatic) {
 		case "style.css":
-			static = style
+			a = assetStyle
+			ct = "text/css"
 		case "script.js":
-			static = script
+			a = assetScript
+			ct = "application/javascript"
 		default:
 			http.NotFound(w, r)
 			return
 		}
-		_, err := fmt.Fprint(w, static)
+
+		f, err := assets.Open(a)
 		if err != nil {
-			s.internalError(w, "failed to execute style.css file", err)
+			s.internalError(w, "failed to open asset file "+a, err)
+			return
+		}
+
+		w.Header().Add("Content-Type", ct)
+		w.Header().Add("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Add("X-Content-Type-Options", "nosniff")
+
+		_, err = io.Copy(w, f)
+		if err != nil {
+			s.internalError(w, "failed to serve "+a, err)
 			return
 		}
 	}

@@ -208,24 +208,47 @@ func TestServer(t *testing.T) {
 			wantBodyString: "404 page not found\n",
 		},
 		{
-			name:           "static/style.css",
-			path:           "/static/style.css",
-			method:         http.MethodGet,
-			wantStatus:     http.StatusOK,
-			wantBodyString: ".somecss\n", // Change for wantBodyAssert: "css" if it makes sense
-		},
-		{
-			name:           "static/script.js",
-			path:           "/static/script.js",
-			method:         http.MethodGet,
-			wantStatus:     http.StatusOK,
-			wantBodyString: "somejs;\n", // Change for wantBodyAssert: "js" if it makes sense
-		},
-		{
-			name:       "static/notfound",
-			path:       "/static/cuak",
+			name:       "static/style.css",
+			path:       "/static/style.css",
 			method:     http.MethodGet,
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type":           "text/css",
+				"Cache-Control":          "public, max-age=31536000, immutable",
+				"X-Content-Type-Options": "nosniff",
+			},
+			wantBodyString: func() string {
+				f, _ := assets.ReadFile(assetStyle) //nolint: errcheck
+				return string(f)
+			}(),
+		},
+		{
+			name:       "static/script.js",
+			path:       "/static/script.js",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type":           "application/javascript",
+				"Cache-Control":          "public, max-age=31536000, immutable",
+				"X-Content-Type-Options": "nosniff",
+			},
+			wantBodyString: func() string {
+				f, _ := assets.ReadFile(assetScript) //nolint: errcheck
+				return string(f)
+			}(),
+		},
+		{
+			name:           "static/notfound",
+			path:           "/static/cuak",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusNotFound,
+			wantBodyString: "404 page not found\n",
+		},
+		{
+			name:       "static wrong method",
+			path:       "/static/script.js",
+			method:     http.MethodPost,
+			wantStatus: http.StatusMethodNotAllowed,
 		},
 	}
 
