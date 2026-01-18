@@ -73,7 +73,7 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 
 func (s *server) index() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" || r.Method != http.MethodGet {
+		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}

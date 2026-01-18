@@ -201,6 +201,12 @@ func TestServer(t *testing.T) {
 			wantBodyAssert: "html",
 		},
 		{
+			name:       "index page wrong method",
+			path:       "/",
+			method:     http.MethodPost,
+			wantStatus: http.StatusMethodNotAllowed,
+		},
+		{
 			name:           "rando page",
 			path:           "/123",
 			method:         http.MethodGet,
@@ -208,7 +214,7 @@ func TestServer(t *testing.T) {
 			wantBodyString: "404 page not found\n",
 		},
 		{
-			name:       "static/style.css",
+			name:       "static endpoint style.css",
 			path:       "/static/style.css",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
@@ -223,7 +229,7 @@ func TestServer(t *testing.T) {
 			}(),
 		},
 		{
-			name:       "static/script.js",
+			name:       "static endpoint script.js",
 			path:       "/static/script.js",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
@@ -238,14 +244,14 @@ func TestServer(t *testing.T) {
 			}(),
 		},
 		{
-			name:           "static/notfound",
+			name:           "static endpoint notfound",
 			path:           "/static/cuak",
 			method:         http.MethodGet,
 			wantStatus:     http.StatusNotFound,
 			wantBodyString: "404 page not found\n",
 		},
 		{
-			name:       "static wrong method",
+			name:       "static endpoint wrong method",
 			path:       "/static/script.js",
 			method:     http.MethodPost,
 			wantStatus: http.StatusMethodNotAllowed,
