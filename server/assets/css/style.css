@@ -1,3 +1,3 @@
-details > summary {
-    list-style-type: none;
+.placeholder {
+    visibility: hidden;
 }
