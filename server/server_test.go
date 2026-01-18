@@ -201,11 +201,60 @@ func TestServer(t *testing.T) {
 			wantBodyAssert: "html",
 		},
 		{
+			name:       "index page wrong method",
+			path:       "/",
+			method:     http.MethodPost,
+			wantStatus: http.StatusMethodNotAllowed,
+		},
+		{
 			name:           "rando page",
 			path:           "/123",
 			method:         http.MethodGet,
 			wantStatus:     http.StatusNotFound,
 			wantBodyString: "404 page not found\n",
+		},
+		{
+			name:       "static endpoint style.css",
+			path:       "/static/style.css",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type":           "text/css",
+				"Cache-Control":          "public, max-age=31536000, immutable",
+				"X-Content-Type-Options": "nosniff",
+			},
+			wantBodyString: func() string {
+				f, _ := assets.ReadFile(assetStyle) //nolint: errcheck
+				return string(f)
+			}(),
+		},
+		{
+			name:       "static endpoint script.js",
+			path:       "/static/script.js",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type":           "application/javascript",
+				"Cache-Control":          "public, max-age=31536000, immutable",
+				"X-Content-Type-Options": "nosniff",
+			},
+			wantBodyString: func() string {
+				f, _ := assets.ReadFile(assetScript) //nolint: errcheck
+				return string(f)
+			}(),
+		},
+		{
+			name:           "static endpoint notfound",
+			path:           "/static/cuak",
+			method:         http.MethodGet,
+			wantStatus:     http.StatusNotFound,
+			wantBodyString: "404 page not found\n",
+		},
+		{
+			name:       "static endpoint wrong method",
+			path:       "/static/script.js",
+			method:     http.MethodPost,
+			wantStatus: http.StatusMethodNotAllowed,
 		},
 	}
 
