@@ -72,7 +72,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "ENV=test make run",
+    command: "ENV=test make db-up mod migrate-up && POSTGRES_PASSWORD=password go run main.go",,
     url: "http://localhost:8080",
     reuseExistingServer: !process.env.CI,
   },
