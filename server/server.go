@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -56,8 +57,13 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	mux.HandleFunc("GET /help", s.help())
 	mux.HandleFunc("/", s.index())
 
+	port := ":80"
+	if os.Getenv("ENV") == "test" {
+		port = "8080"
+	}
+
 	return &http.Server{
-		Addr:              ":80",
+		Addr:              port,
 		Handler:           metrics.HTTPMiddleware(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}, nil

@@ -72,7 +72,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "make run",
+    command: "ENV=test make run",
     url: "http://localhost:80",
     reuseExistingServer: !process.env.CI,
   },
