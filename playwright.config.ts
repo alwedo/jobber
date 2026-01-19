@@ -72,7 +72,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "POSTGRES_PASSWORD=password go run main.go",
+    command:
+      "docker build -t jobber-server . && docker run --name jobber-server-server-instance -p 8080:8080 -e POSTGRES_PASSWORD=password ENV=test jobber-server",
     url: "http://localhost:8080",
     reuseExistingServer: !process.env.CI,
   },
