@@ -4,8 +4,10 @@ POSTGRES_PASSWORD ?= password
 # https://github.com/golang-migrate/migrate/blob/master/database/postgres/TUTORIAL.md
 .PHONY: migrate-up
 migrate-up:
-	@result=$$(migrate -database postgres://jobber:$(POSTGRES_PASSWORD)@localhost:5432/jobber?sslmode=disable -path db/migrations up 2>&1); \
-	echo "Migrating DB: $$result"
+	@migrate \
+			-database postgres://jobber:$(POSTGRES_PASSWORD)@localhost:5432/jobber?sslmode=disable \
+			-path db/migrations \
+			up || true
 
 .PHONY: migrate-down
 migrate-down:
