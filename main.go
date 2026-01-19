@@ -75,9 +75,11 @@ func initDB(ctx context.Context, log *slog.Logger) (*db.Queries, func()) {
 	conn, err := pgxpool.New(ctx, connStr)
 	if err != nil {
 		log.Error("unable to initialize db connection", slog.Any("error", err))
+		os.Exit(1)
 	}
 	if err := conn.Ping(ctx); err != nil {
 		log.Error("unable to ping database", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	return db.New(conn), conn.Close
