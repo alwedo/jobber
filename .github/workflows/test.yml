@@ -48,6 +48,9 @@ jobs:
             - name: Install Playwright Browsers
               run: npx playwright install --with-deps
 
+            - name: Run DB for testing
+              run: make db-up mod migrate-up
+
             - name: Run Playwright tests
               run: npx playwright test
 
