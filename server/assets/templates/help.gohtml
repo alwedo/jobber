@@ -1,32 +1,5 @@
 {{template "top" .}}
-<main>
-    <style>
-    details {
-        max-width: 450px;
-        margin: 0 auto;
-        text-align: center;
-    }
-    details > summary {
-        list-style-type: none;
-    }
-
-    details > summary::before {
-        content: '▹ ';
-    }
-
-    details[open] > summary::before {
-        content: '▿ ';
-    }
-    p {
-        text-align: center;
-        max-width: 450px;
-        margin: 0 auto;
-    }
-    details ul {
-        text-align: left;
-        margin-left: 0;
-    }
-    </style>
+<main class="container-help">
     <br>
     <p><b>what is this?</b><br>
     <b>rssjobs</b> automates the job search from job portals (ie. LinkedIn) for you and gives you a place to see the latest offers clearly displayed in a browser's tab or in your RSS reader with no noise, tracking or advertising.
@@ -52,7 +25,7 @@
     <p>do you have any reader recommendation? send it to <i>hello@rssjobs.app</i>!</p>
     </details>
      <br>
-    <details class="faq">
+    <details>
     <summary><b>FAQ</b></summary>
     <details>
     <summary>do I really have to install an app?</summary>

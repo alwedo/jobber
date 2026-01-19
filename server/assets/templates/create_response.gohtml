@@ -1,4 +1,4 @@
-<p>
+<p class="container-create-response">
     {{ if .TimedOut }}
     while your search query has been created, we will need some more time to fetch all the current offers. <br>
     please save the URL and check back in 5 minutes or so.<br><br>
@@ -10,7 +10,7 @@
 
     <button class="copy-button" onclick="copyToClipboard('{{.URL}}')">copy RSS feed</button>
 
-    <a href="{{.URL}}" target="_blank" style="text-decoration: none;">
+    <a href="{{.URL}}" target="_blank">
         <button type="button">open RSS feed</button>
     </a>
 
