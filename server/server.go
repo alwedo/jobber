@@ -61,7 +61,7 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	if os.Getenv("ENV") == "test" {
 		port = "8080"
 	}
-
+	fmt.Println("port: " + port)
 	return &http.Server{
 		Addr:              port,
 		Handler:           metrics.HTTPMiddleware(mux),
