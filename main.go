@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -28,7 +29,7 @@ func main() {
 
 	metrics.Init() // will panic if fails to init.
 
-	d, dbCloser := initDB(ctx, log)
+	d, dbCloser := initDB(ctx)
 	defer dbCloser()
 
 	j, jCloser := jobber.New(log, d)
@@ -66,7 +67,7 @@ func main() {
 	}
 }
 
-func initDB(ctx context.Context, log *slog.Logger) (*db.Queries, func()) {
+func initDB(ctx context.Context) (*db.Queries, func()) {
 	host := os.Getenv("DB_HOST")
 	if host == "" {
 		host = "localhost"
@@ -74,12 +75,10 @@ func initDB(ctx context.Context, log *slog.Logger) (*db.Queries, func()) {
 	connStr := fmt.Sprintf("host=%s user=jobber password=%s dbname=jobber sslmode=disable", host, os.Getenv("POSTGRES_PASSWORD"))
 	conn, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		log.Error("unable to initialize db connection", slog.Any("error", err))
-		os.Exit(1)
+		log.Fatalf("unable to initialize db connection", slog.Any("error", err))
 	}
 	if err := conn.Ping(ctx); err != nil {
-		log.Error("unable to ping database", slog.Any("error", err))
-		os.Exit(1)
+		log.Fatalf("unable to ping database", slog.Any("error", err))
 	}
 
 	return db.New(conn), conn.Close
