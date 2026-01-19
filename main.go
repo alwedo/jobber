@@ -75,10 +75,10 @@ func initDB(ctx context.Context) (*db.Queries, func()) {
 	connStr := fmt.Sprintf("host=%s user=jobber password=%s dbname=jobber sslmode=disable", host, os.Getenv("POSTGRES_PASSWORD"))
 	conn, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		log.Fatalf("unable to initialize db connection", slog.Any("error", err))
+		log.Fatalf("unable to initialize db connection, %v", err)
 	}
 	if err := conn.Ping(ctx); err != nil {
-		log.Fatalf("unable to ping database", slog.Any("error", err))
+		log.Fatalf("unable to ping database, %v", err)
 	}
 
 	return db.New(conn), conn.Close
