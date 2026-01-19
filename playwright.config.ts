@@ -72,8 +72,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command:
-      "docker build -t jobber-server . && docker run --name jobber-server-server-instance -p 8080:8080 -e POSTGRES_PASSWORD=password ENV=test jobber-server",
+    command: "docker-compose -f docker-compose-ci.yml up jobber",
     url: "http://localhost:8080",
     reuseExistingServer: !process.env.CI,
   },
