@@ -63,8 +63,7 @@ db-up:
 .PHONY: run
 run: db-up mod migrate-up
 	@echo "Starting server..."
-	@POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) go run main.go; \
-	exit 0
+	@POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) go run main.go
 
 .PHONY: mod
 mod:
