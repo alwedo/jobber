@@ -72,7 +72,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "docker compose -f docker-compose-ci.yml up -d",
+    command: "docker compose -f docker-compose-ci.yml up jobber",
     url: "http://localhost:8080",
     reuseExistingServer: !process.env.CI,
   },
