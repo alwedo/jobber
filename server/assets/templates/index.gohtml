@@ -1,10 +1,9 @@
 {{template "top" .}}
-<main>
+<main class="container-index">
     <div class="centered-form">
         <div id="content" class="spinner htmx-indicator">
             <p>create a new RSS feed for your job search...</p>
             <form
-                style="display: inline"
                 hx-post="/feeds"
                 hx-indicator=".spinner"
                 hx-target="#content"
@@ -29,6 +28,6 @@
         </div>
         <p class="spinner htmx-indicator">Loading...</p>
     </div>
-    <p style="text-align: center">how do I use this? <a href="/help">help!</a></p>
+    <p class="help-text">how do I use this? <a href="/help">help!</a></p>
 </main>
 {{template "bottom" .}}

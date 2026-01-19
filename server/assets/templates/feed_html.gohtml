@@ -1,53 +1,15 @@
 {{template "top" .}}
-<main>{{ if .NotFound }}
-    <p style="text-align: center">no feed has been found for <b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br>
-        try creating a new job search feed <a href="/">here</a>
-    </p>
-    {{ else }}
-    <style>
-    .container {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-    }
+<main class="container-feed">
+    <div class="page-text">
+        {{ if .NotFound }}
+        <p>no feed has been found for <b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b><br>
+            try creating a new job search feed <a href="/">here</a>
+        </p>
+        {{ else }}
+        <p><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b></p>
+        <p>This page auto-refreshes every 30 minutes<br></p>
 
-    .details-wrapper {
-        width: auto;
-        max-width: 100%;
-        text-align: left;
-    }
-    details {
-        margin-bottom: 4px;
-        width: 100%;
-    }
-    details > summary {
-        list-style-type: none;
-    }
-
-    details > summary::before {
-        content: '▹ ';
-    }
-
-    details[open] > summary::before {
-        content: '▿ ';
-    }
-
-    details > ul {
-        max-width: 500px;
-        width: 100%;
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-    }
-
-    @media (max-width: 600px) {
-        details > ul {
-            max-width: 100%;
-        }
-    }
-    </style>
-    <p style="text-align: center"><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b></p>
-    <p style="text-align: center">This page auto-refreshes every 30 minutes<br></p>
-
+    </div>
     <div class="container">
               <div class="details-wrapper" aria-live="polite">
                   {{ range .Offers }}
