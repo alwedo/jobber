@@ -1,4 +1,11 @@
 /* Shared (top.gohtml, bottom.gohtml, and shared styles) */
+body {
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 0px 30px;
+  line-height: 1.3;
+}
+
 header,
 footer {
   p {
@@ -69,31 +76,24 @@ footer {
 /* feed_html.gohtml */
 
 .container-feed {
-  .container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-
   .page-text {
     text-align: center;
   }
 
   .details-wrapper {
-    width: auto;
-    max-width: 100%;
-    text-align: left;
+    display: grid;
+    gap: 5px;
   }
-  details {
-    margin-bottom: 4px;
-    width: 100%;
-  }
+
   details > summary {
     list-style-type: none;
   }
 
   details > summary::before {
+    display: inline-block;
     content: "▹ ";
+    width: 16px;
+    height: 16px;
   }
 
   details[open] > summary::before {
@@ -101,10 +101,9 @@ footer {
   }
 
   details > ul {
-    max-width: 500px;
-    width: 100%;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
+    display: grid;
+    gap: 3px;
+    list-style: none;
   }
 
   @media (max-width: 600px) {
@@ -121,8 +120,10 @@ footer {
 /* help.gohtml */
 
 .container-help {
+  max-width: 450px;
+  margin: 0 auto;
+
   details {
-    max-width: 450px;
     margin: 0 auto;
     text-align: center;
   }
@@ -139,7 +140,6 @@ footer {
   }
   p {
     text-align: center;
-    max-width: 450px;
     margin: 0 auto;
   }
   details ul {

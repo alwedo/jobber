@@ -7,26 +7,24 @@
         </p>
         {{ else }}
         <p><b>{{.Keywords}}</b> jobs in <b>{{.Location}}</b></p>
-        <p>This page auto-refreshes every 30 minutes<br></p>
+        <p>this page auto-refreshes every 30 minutes. freshly added postings will be highlighted.<br></p>
 
     </div>
-    <div class="container">
-              <div class="details-wrapper" aria-live="polite">
-                  {{ range .Offers }}
-                      <details>
-                          <summary>{{ .Title }} at {{ .Company }}</summary>
-                          <ul>
-                              <li><b>Title:</b> {{ .Title }}</li>
-                              <li><b>Company:</b> {{ .Company }}</li>
-                              {{ if .Description }}<li><b>Description:</b> {{ .Description }}</li>{{ end -}}
-                              <li><b>Location:</b> {{ .Location }}</li>
-                              <li><b>Posted:</b> {{ pubDate . }}</li>
-                              <li><b>Source:</b> <a href="{{.Url}}" target="_blank">{{.Source}}</a></li>
-                          </ul>
-                      </details>
-                  {{ end }}
-              </div>
-          </div>
+    <div class="details-wrapper" aria-live="polite">
+        {{ range .Offers }}
+            <details>
+                <summary>{{ .Title }} at {{ .Company }}</summary>
+                <ul>
+                    <li><b>Title:</b> {{ .Title }}</li>
+                    <li><b>Company:</b> {{ .Company }}</li>
+                    {{ if .Description }}<li><b>Description:</b> {{ .Description }}</li>{{ end -}}
+                    <li><b>Location:</b> {{ .Location }}</li>
+                    <li><b>Posted:</b> {{ pubDate . }}</li>
+                    <li><b>Source:</b> <a href="{{.Url}}" target="_blank">{{.Source}}</a></li>
+                </ul>
+            </details>
+        {{ end }}
+    </div>
       {{ end }}
 </main>
 {{template "bottom" .}}
