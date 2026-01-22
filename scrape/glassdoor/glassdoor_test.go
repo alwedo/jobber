@@ -14,10 +14,28 @@ import (
 func TestFetchLocation(t *testing.T) {
 	mock := &glassdoorMock{t: t}
 	g := &glassdoor{retryhttp.NewWithTransport(mock), slog.New(slog.NewJSONHandler(io.Discard, nil))}
-	resp, err := g.fetchLocation(context.Background(), "berlin")
+
+	location := "berlin"
+	resp, err := g.fetchLocation(context.Background(), location)
 	if err != nil {
 		t.Fatalf("failed in fetchLocationId: %v", err)
 	}
+
+	gotURL := mock.req.URL.Scheme + "://" + mock.req.URL.Host
+	if gotURL != baseURL {
+		t.Errorf("wanted url %s, got %s", baseURL, gotURL)
+	}
+
+	gotTerm := mock.req.URL.Query().Get(paramTerm)
+	if location != gotTerm {
+		t.Errorf("wanted param Term to eq %s, got %s", location, gotTerm)
+	}
+
+	gotLocTypeFilters := mock.req.URL.Query().Get(paramLocationTypeFilters)
+	if paramLocationTypeFiltersValue != gotLocTypeFilters {
+		t.Errorf("wanted param locationTypeFilters to eq %s, got %s", paramLocationTypeFiltersValue, gotLocTypeFilters)
+	}
+
 	wantLocID := 2622109
 	wantLocType := "C"
 	if wantLocID != resp.LocationID {
