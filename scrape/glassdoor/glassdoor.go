@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/retryhttp"
@@ -81,10 +82,15 @@ type body struct {
 type glassdoor struct {
 	client *retryhttp.Client
 	logger *slog.Logger
+	lCache sync.Map
 }
 
 func New(l *slog.Logger) *glassdoor { //nolint: revive
-	return &glassdoor{client: retryhttp.New(), logger: l}
+	return &glassdoor{
+		client: retryhttp.New(),
+		logger: l,
+		lCache: sync.Map{},
+	}
 }
 
 func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
@@ -92,6 +98,11 @@ func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([
 }
 
 func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, error) {
+	// We cache locations to avoid calling glassdoor every time for known ones.
+	if v, ok := g.lCache.Load(loc); ok {
+		return v.(*location), nil
+	}
+
 	params := &url.Values{}
 	params.Add(paramLocationTypeFilters, paramLocationTypeFiltersValue)
 	params.Add(paramTerm, loc)
@@ -119,5 +130,12 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %v", err)
 	}
 
-	return &l[0], nil
+	result := &l[0]
+
+	actual, loaded := g.lCache.LoadOrStore(loc, result)
+	if loaded {
+		return actual.(*location), nil
+	}
+
+	return result, nil
 }
