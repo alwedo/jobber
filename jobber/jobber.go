@@ -153,39 +153,36 @@ func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.
 }
 
 func (j *Jobber) runQuery(qID int64, scraperName string) {
+	logAttr := []any{slog.Int64("queryID", qID), slog.String("scraper", scraperName)}
+
 	s, ok := j.scrList[scraperName]
 	if !ok {
-		j.logger.Error("unable to find scraper in jobber.runQuery", slog.Int64("queryID", qID), slog.String("scraper", scraperName))
+		j.logger.Error("unable to find scraper in jobber.runQuery", logAttr...)
 		return
 	}
 
 	q, err := j.db.GetQueryScraper(j.ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: scraperName})
 	if err != nil {
-		j.logger.Error("unable to get query in jobber.runQuery", slog.Int64("queryID", qID), slog.String("error", err.Error()))
+		j.logger.Error("unable to get query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		return
 	}
+	logAttr = append(logAttr, slog.String("keywords", q.Keywords), slog.String("location", q.Location))
 
 	// We remove queries that haven't been used for longer than 7 days.
 	if time.Since(q.QueriedAt.Time) > time.Hour*24*7 {
 		if err := j.db.DeleteQuery(j.ctx, q.ID); err != nil {
-			j.logger.Error("unable to delete query in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+			j.logger.Error("unable to delete query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 		j.sched.RemoveByTags(q.Keywords + q.Location)
-		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Dec()
+		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Sub(float64(len(j.scrList)))
 
-		j.logger.Info("deleting unused query", slog.Int64("queryID", q.ID), slog.String("keywords", q.Keywords), slog.String("location", q.Location))
+		j.logger.Info("deleting unused query", logAttr...)
 		return
 	}
 
 	offers, err := s.Scrape(j.ctx, q)
 	if err != nil {
-		j.logger.Error("scrape in jobber.runQuery",
-			slog.Int64("queryID", q.ID),
-			slog.String("keywords", q.Keywords),
-			slog.String("location", q.Location),
-			slog.String("scraper", scraperName),
-			slog.String("error", err.Error()),
-		)
+		j.logger.Error("scrape in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		// We only return after an error if there are no offers since
 		// some cases (ie, too many requests) will have partial results.
 		if len(offers) == 0 {
@@ -196,39 +193,42 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 	if len(offers) > 0 {
 		for _, o := range offers {
 			if err := j.db.CreateOffer(j.ctx, &o); err != nil {
-				j.logger.Error("unable to create offer in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+				j.logger.Error("unable to create offer in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 				continue
 			}
 			if err := j.db.CreateQueryOfferAssoc(j.ctx, &db.CreateQueryOfferAssocParams{
 				QueryID: q.ID,
 				OfferID: o.ID,
 			}); err != nil {
-				j.logger.Error("unable to create query offer association in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+				j.logger.Error("unable to create query offer association in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 			}
 		}
 		if err := j.db.UpdateQueryScrapedAt(j.ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: scraperName}); err != nil {
-			j.logger.Error("unable to update scraper timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+			j.logger.Error("unable to update scraper timestamp in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 	}
 
 	if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
-		j.logger.Error("unable to update query timestamp in jobber.runQuery", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
+		j.logger.Error("unable to update query timestamp in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 	}
 
-	j.logger.Debug("successfuly completed jobber.runQuery",
-		slog.Int64("queryID", q.ID),
-		slog.String("keywords", q.Keywords),
-		slog.String("location", q.Location),
-		slog.String("scraper", scraperName),
-	)
+	j.logger.Debug("successfuly completed jobber.runQuery", logAttr...)
 }
 
+// Schedules the query for every scraper.
 func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
-	// Schedules the query for every scraper.
+	// We stagger the query cron trigger by a minute per scraper.
+	// This is to avoid jobs being fired after a query is deleted.
+	// By staggering we allow the first job to delete the query and the
+	// subsequent jobs. When not staggered that will lead to some jobs
+	// firing after the query has already been deleted.
+	var stagger int
+
 	for name := range j.scrList {
 		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, name)}
 		opts = append(opts, o...)
-		cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute())
+		cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute()+stagger)
+		stagger++
 
 		job, err := j.sched.NewJob(
 			gocron.CronJob(cron, false),
