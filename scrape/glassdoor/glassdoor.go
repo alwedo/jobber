@@ -2,7 +2,11 @@ package glassdoor
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/retryhttp"
@@ -16,7 +20,7 @@ const (
 	searchEndpoint                = "/job-search-next/bff/jobSearchResultsQuery"
 	paramLocationTypeFilters      = "locationTypeFilters"
 	paramLocationTypeFiltersValue = "CITY,STATE,COUNTRY"
-	paramTerm                     = "term"
+	paramTerm                     = "term" // Term is the location, ie. 'term=berlin'
 )
 
 // When querying the location on the searchEndpoint, glassdoor respond with a
@@ -27,11 +31,9 @@ var locationMap = map[string]string{
 	"N": "COUNTRY",
 }
 
-type locationResponse struct {
-	data []struct {
-		LocationID   int    `json:"locationId"`
-		LocationType string `json:"locationType"`
-	}
+type location struct {
+	LocationID   int    `json:"locationId"`
+	LocationType string `json:"locationType"`
 }
 
 type response struct {
@@ -87,4 +89,35 @@ func New(l *slog.Logger) *glassdoor { //nolint: revive
 
 func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	return []db.CreateOfferParams{}, nil
+}
+
+func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, error) {
+	params := &url.Values{}
+	params.Add(paramLocationTypeFilters, paramLocationTypeFiltersValue)
+	params.Add(paramTerm, loc)
+
+	u, err := url.Parse(baseURL + locationEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse url %s in glassdoor.fetchLocation: %v", baseURL+locationEndpoint, err)
+	}
+	u.RawQuery = params.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create http request glassdoor.fetchLocation: %v", err)
+	}
+
+	resp, err := g.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("unable to perform http request glassdoor.fetchLocation: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var l = []location{}
+
+	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {
+		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %v", err)
+	}
+
+	return &l[0], nil
 }
