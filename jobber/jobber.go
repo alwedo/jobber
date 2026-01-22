@@ -217,11 +217,11 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 
 // Schedules the query for every scraper.
 func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
-	// We stagger the query cron trigger by a minute per scraper.
-	// This is to avoid jobs being fired after a query is deleted.
+	// We stagger the query cron trigger by a minute per scraper to avoid
+	// further jobs being fired after a query has been deleted.
 	// By staggering we allow the first job to delete the query and the
-	// subsequent jobs. When not staggered that will lead to some jobs
-	// firing after the query has already been deleted.
+	// subsequent scraper jobs. When not staggered that will lead to some
+	// jobs firing after the query has already been deleted.
 	var stagger int
 
 	for name := range j.scrList {
