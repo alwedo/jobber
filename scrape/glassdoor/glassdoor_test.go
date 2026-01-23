@@ -103,9 +103,18 @@ func (g *glassdoorMock) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Save the last request for further inspection
 	g.req = req
 
-	resp := &http.Response{StatusCode: http.StatusOK}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+	}
 
-	fn := "test_data/location.json"
+	var fn string
+	switch req.URL.Path {
+	case locationEndpoint:
+		fn = "test_data/location.json"
+	case searchEndpoint:
+		// fn =
+	}
+
 	body, err := os.Open(fn)
 	if err != nil {
 		g.t.Fatalf("failed to open %s in mockResp.RoundTrip: %s", fn, err)
