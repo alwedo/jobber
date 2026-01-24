@@ -109,18 +109,30 @@ func TestFetchOffers(t *testing.T) {
 	}
 
 	// Assert request body default values
-	if mock.reqBody.NumJobsToShow != 30 {
-		t.Errorf("wanted NumJobsToShow to be 30, got %d", mock.reqBody.NumJobsToShow)
-	}
 	if mock.reqBody.FilterParams[0].FilterKey != "fromAge" {
 		t.Errorf("wanted FilterKey to be fromAge, got %s", mock.reqBody.FilterParams[0].FilterKey)
+	}
+	if mock.reqBody.FilterParams[0].Values != "7" {
+		t.Errorf("wanted FilterKey to be 7, got %s", mock.reqBody.FilterParams[0].Values)
+	}
+	if mock.reqBody.NumJobsToShow != 30 {
+		t.Errorf("wanted NumJobsToShow to be 30, got %d", mock.reqBody.NumJobsToShow)
 	}
 	// Assert request body passed values
 	if mock.reqBody.Keyword != query.Keywords {
 		t.Errorf("wanted Keywords to be %s, got %s", query.Keywords, mock.reqBody.Keyword)
 	}
+	if mock.reqBody.LocationID != 2622109 { // this is the LocationID in the test data
+		t.Errorf("wanted LocationID to be %d, got %d", 2622109, mock.reqBody.LocationID)
+	}
+	if mock.reqBody.LocationType != "CITY" { // see locationMap
+		t.Errorf("wanted LocationType to be %s, got %s", "CITY", mock.reqBody.LocationType)
+	}
 	if mock.reqBody.PageCursor != pageCursor {
 		t.Errorf("wanted PageCursor to be %s, got %s", pageCursor, mock.reqBody.PageCursor)
+	}
+	if mock.reqBody.PageNumber != 1 {
+		t.Errorf("wanted PageNumber to be 1, got %d", mock.reqBody.PageNumber)
 	}
 
 	// Assert response brings test data values
