@@ -1,9 +1,11 @@
 package glassdoor
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -40,7 +42,7 @@ type location struct {
 type response struct {
 	Data struct {
 		JobListings struct {
-			Offers []offer `json:"jobListings"`
+			JobListings []offer `json:"jobListings"`
 		} `json:"jobListings"`
 		PaginationCursors []struct {
 			Cursor     string `json:"cursor"`
@@ -65,7 +67,7 @@ type offer struct {
 	} `json:"jobView"`
 }
 
-type body struct {
+type reqBody struct {
 	FilterParams []struct {
 		FilterKey string `json:"filterKey"`
 		Values    string `json:"values"`
@@ -76,6 +78,20 @@ type body struct {
 	NumJobsToShow int    `json:"numJobsToShow"`
 	PageCursor    string `json:"pageCursor"`
 	PageNumber    int    `json:"pageNumber"`
+}
+
+// newReqBody initializes a request body with default values.
+func newReqBody() *reqBody {
+	return &reqBody{
+		FilterParams: []struct {
+			FilterKey string `json:"filterKey"`
+			Values    string `json:"values"`
+		}{
+			{FilterKey: "fromAge", Values: ""},
+		},
+		NumJobsToShow: 30,
+		PageNumber:    1,
+	}
 }
 
 type glassdoor struct {
@@ -94,6 +110,35 @@ func New(l *slog.Logger) *glassdoor { //nolint: revive
 
 func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	return []db.CreateOfferParams{}, nil
+}
+
+func (g *glassdoor) fetchOffers(ctx context.Context, rb *reqBody) (response, error) {
+	var r response
+	jsonBody, err := json.Marshal(rb)
+	if err != nil {
+		return r, fmt.Errorf("unable to marshal body in glassdoor.fetchOffers: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+searchEndpoint, bytes.NewReader(jsonBody))
+	if err != nil {
+		return r, fmt.Errorf("unable to create http request in glassdoor.fetchOffers: %w", err)
+	}
+
+	resp, err := g.client.Do(req)
+	if err != nil {
+		return r, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return r, fmt.Errorf("unable to read response body in glassdoor.fetchOffers: %w", err)
+	}
+
+	if err := json.Unmarshal(body, &r); err != nil {
+		return r, fmt.Errorf("unable to unmarshal response in glassdoor.fetchOffers: %w", err)
+	}
+	return r, nil
 }
 
 func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, error) {

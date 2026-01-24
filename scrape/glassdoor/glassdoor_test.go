@@ -2,6 +2,8 @@ package glassdoor
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -19,7 +21,7 @@ import (
 
 func TestScrape(t *testing.T) {
 	synctest.Test(t, func(*testing.T) {
-		mock := &glassdoorMock{t: t}
+		mock := newGlassdoorMock(t)
 		g := &glassdoor{
 			client: retryhttp.NewWithTransport(mock),
 			logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
@@ -68,6 +70,58 @@ func TestScrape(t *testing.T) {
 	})
 }
 
+func TestFetchOffers(t *testing.T) {
+	mock := newGlassdoorMock(t)
+	g := &glassdoor{
+		client: retryhttp.NewWithTransport(mock),
+		logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		lCache: sync.Map{},
+	}
+	keywords := "developer"
+	pageCursor := "cuak"
+
+	req := newReqBody()
+	req.Keyword = keywords
+	req.PageCursor = pageCursor
+
+	resp, err := g.fetchOffers(context.Background(), req)
+	if err != nil {
+		t.Fatalf("want no errors on fetchOffers, got %v", err)
+	}
+
+	// Assert http values
+	if mock.req.Method != http.MethodPost {
+		t.Errorf("wanted fetchOffers http call method to be %s, got %s", http.MethodPost, mock.req.Method)
+	}
+	gotURL := mock.req.URL.Scheme + "://" + mock.req.URL.Host
+	if gotURL != baseURL {
+		t.Errorf("wanted url %s, got %s", baseURL, gotURL)
+	}
+	if mock.req.URL.Path != searchEndpoint {
+		t.Errorf("wanted fetchOffers http call path to be %s, got %s", searchEndpoint, mock.req.URL.Path)
+	}
+
+	// Assert request body default values
+	if mock.reqBody.NumJobsToShow != 30 {
+		t.Errorf("wanted NumJobsToShow to be 30, got %d", mock.reqBody.NumJobsToShow)
+	}
+	if mock.reqBody.FilterParams[0].FilterKey != "fromAge" {
+		t.Errorf("wanted FilterKey to be fromAge, got %s", mock.reqBody.FilterParams[0].FilterKey)
+	}
+	// Assert request body passed values
+	if mock.reqBody.Keyword != keywords {
+		t.Errorf("wanted Keywords to be %s, got %s", keywords, mock.reqBody.Keyword)
+	}
+	if mock.reqBody.PageCursor != pageCursor {
+		t.Errorf("wanted PageCursor to be %s, got %s", pageCursor, mock.reqBody.PageCursor)
+	}
+
+	// Assert response brings test data values
+	if len(resp.Data.JobListings.JobListings) != 30 {
+		t.Errorf("wanted 30 job listings, got %d", len(resp.Data.JobListings.JobListings))
+	}
+}
+
 func TestFetchLocation(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -91,7 +145,7 @@ func TestFetchLocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := &glassdoorMock{t: t}
+			mock := newGlassdoorMock(t)
 			g := &glassdoor{
 				client: retryhttp.NewWithTransport(mock),
 				logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
@@ -111,6 +165,10 @@ func TestFetchLocation(t *testing.T) {
 				gotURL := mock.req.URL.Scheme + "://" + mock.req.URL.Host
 				if gotURL != baseURL {
 					t.Errorf("wanted url %s, got %s", baseURL, gotURL)
+				}
+
+				if mock.req.URL.Path != locationEndpoint {
+					t.Errorf("wanted path %s, got %s", locationEndpoint, mock.req.URL.Path)
 				}
 
 				gotTerm := mock.req.URL.Query().Get(paramTerm)
@@ -151,8 +209,16 @@ func TestFetchLocation(t *testing.T) {
 }
 
 type glassdoorMock struct {
-	t   testing.TB
-	req *http.Request
+	t       testing.TB
+	req     *http.Request
+	reqBody *reqBody
+}
+
+func newGlassdoorMock(t testing.TB) *glassdoorMock {
+	return &glassdoorMock{
+		t:       t,
+		reqBody: &reqBody{},
+	}
 }
 
 func (g *glassdoorMock) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -168,7 +234,14 @@ func (g *glassdoorMock) RoundTrip(req *http.Request) (*http.Response, error) {
 	case locationEndpoint:
 		fn = "test_data/location.json"
 	case searchEndpoint:
-		// fn =
+		defer req.Body.Close()
+
+		// Decode reqBody into mock for further inspection
+		if err := json.NewDecoder(req.Body).Decode(g.reqBody); err != nil {
+			g.t.Fatalf("unable to decode request body in glassdoorMock: %v", err)
+		}
+
+		fn = fmt.Sprintf("test_data/glassdoor%d.json", g.reqBody.PageNumber)
 	}
 
 	body, err := os.Open(fn)
