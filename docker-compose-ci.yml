@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_DB: jobber
+      POSTGRES_USER: jobber
+      POSTGRES_PASSWORD: ci
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - jobber-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobber -d jobber"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  jobber:
+    build: .
+    container_name: jobber
+    environment:
+      POSTGRES_PASSWORD: ci
+      ENV: test
+      DB_HOST: postgres
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - jobber-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "migrate -database postgres://jobber:ci@postgres:5432/jobber?sslmode=disable -path db/migrations up && /app"
+
+networks:
+  jobber-network:
+    driver: bridge
