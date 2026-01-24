@@ -77,11 +77,18 @@ func TestFetchOffers(t *testing.T) {
 		logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
 		lCache: sync.Map{},
 	}
-	keywords := "developer"
-	pageCursor := "cuak"
 
-	req := newReqBody()
-	req.Keyword = keywords
+	query := &db.GetQueryScraperRow{
+		Keywords: "developer",
+		Location: "germany",
+	}
+
+	req, err := g.newRequestBody(context.Background(), query)
+	if err != nil {
+		t.Fatalf("failed in newReqBody: %v", err)
+	}
+
+	pageCursor := "cuak"
 	req.PageCursor = pageCursor
 
 	resp, err := g.fetchOffers(context.Background(), req)
@@ -109,8 +116,8 @@ func TestFetchOffers(t *testing.T) {
 		t.Errorf("wanted FilterKey to be fromAge, got %s", mock.reqBody.FilterParams[0].FilterKey)
 	}
 	// Assert request body passed values
-	if mock.reqBody.Keyword != keywords {
-		t.Errorf("wanted Keywords to be %s, got %s", keywords, mock.reqBody.Keyword)
+	if mock.reqBody.Keyword != query.Keywords {
+		t.Errorf("wanted Keywords to be %s, got %s", query.Keywords, mock.reqBody.Keyword)
 	}
 	if mock.reqBody.PageCursor != pageCursor {
 		t.Errorf("wanted PageCursor to be %s, got %s", pageCursor, mock.reqBody.PageCursor)
@@ -119,6 +126,61 @@ func TestFetchOffers(t *testing.T) {
 	// Assert response brings test data values
 	if len(resp.Data.JobListings.JobListings) != 30 {
 		t.Errorf("wanted 30 job listings, got %d", len(resp.Data.JobListings.JobListings))
+	}
+}
+
+func TestNewRequestBody(t *testing.T) {
+	// We only test the fromAge value generation here.
+	// All the other elements are indirectly tested in TestFetchOffers.
+	mock := newGlassdoorMock(t)
+	g := &glassdoor{
+		client: retryhttp.NewWithTransport(mock),
+		logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		lCache: sync.Map{},
+	}
+
+	tests := []struct {
+		name      string
+		qt        time.Duration
+		wantValue string
+	}{
+		{
+			name:      "less than a day ago",
+			qt:        23 * time.Hour,
+			wantValue: "1",
+		},
+		{
+			name:      "more than a day ago",
+			qt:        25 * time.Hour,
+			wantValue: "7",
+		},
+		{
+			name:      "uninitialized timestamp ",
+			wantValue: "7",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(*testing.T) {
+				query := &db.GetQueryScraperRow{}
+				if tt.qt != 0 {
+					query.ScrapedAt = pgtype.Timestamptz{
+						Time:  time.Now().Add(-tt.qt),
+						Valid: true,
+					}
+				}
+
+				req, err := g.newRequestBody(context.Background(), query)
+				if err != nil {
+					t.Fatalf("failed to newReqBody: %v", err)
+				}
+
+				if req.FilterParams[0].Values != tt.wantValue {
+					t.Errorf("wanted %s, got %s", tt.wantValue, req.FilterParams[0].Values)
+				}
+			})
+		})
 	}
 }
 
@@ -211,13 +273,13 @@ func TestFetchLocation(t *testing.T) {
 type glassdoorMock struct {
 	t       testing.TB
 	req     *http.Request
-	reqBody *reqBody
+	reqBody *requestBody
 }
 
 func newGlassdoorMock(t testing.TB) *glassdoorMock {
 	return &glassdoorMock{
 		t:       t,
-		reqBody: &reqBody{},
+		reqBody: &requestBody{},
 	}
 }
 

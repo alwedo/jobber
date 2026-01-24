@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/retryhttp"
@@ -67,7 +68,7 @@ type offer struct {
 	} `json:"jobView"`
 }
 
-type reqBody struct {
+type requestBody struct {
 	FilterParams []struct {
 		FilterKey string `json:"filterKey"`
 		Values    string `json:"values"`
@@ -78,20 +79,6 @@ type reqBody struct {
 	NumJobsToShow int    `json:"numJobsToShow"`
 	PageCursor    string `json:"pageCursor"`
 	PageNumber    int    `json:"pageNumber"`
-}
-
-// newReqBody initializes a request body with default values.
-func newReqBody() *reqBody {
-	return &reqBody{
-		FilterParams: []struct {
-			FilterKey string `json:"filterKey"`
-			Values    string `json:"values"`
-		}{
-			{FilterKey: "fromAge", Values: ""},
-		},
-		NumJobsToShow: 30,
-		PageNumber:    1,
-	}
 }
 
 type glassdoor struct {
@@ -112,7 +99,7 @@ func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([
 	return []db.CreateOfferParams{}, nil
 }
 
-func (g *glassdoor) fetchOffers(ctx context.Context, rb *reqBody) (response, error) {
+func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (response, error) {
 	var r response
 	jsonBody, err := json.Marshal(rb)
 	if err != nil {
@@ -139,6 +126,39 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *reqBody) (response, err
 		return r, fmt.Errorf("unable to unmarshal response in glassdoor.fetchOffers: %w", err)
 	}
 	return r, nil
+}
+
+// newRequestBody initializes a request body from a new query.
+// - Stores default immutable values (FilterKey, NumJobsToShow, PageNumber)
+// - Stores query Keywords
+// - Calls for fetchLocation() and resolves the location
+// - Calculates the fromAge value filter param
+func (g *glassdoor) newRequestBody(ctx context.Context, q *db.GetQueryScraperRow) (*requestBody, error) {
+	loc, err := g.fetchLocation(ctx, q.Location)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch location in glassdoor.newRequestBody: %w", err)
+	}
+
+	// Glassdoor's fromAge param takes strings for 1, 3 o 7 days.
+	// We want 7 unless the scraped time is valid and less than a day old.
+	age := "7"
+	if q.ScrapedAt.Valid && q.ScrapedAt.Time.After(time.Now().Add(-24*time.Hour)) {
+		age = "1"
+	}
+
+	return &requestBody{
+		FilterParams: []struct {
+			FilterKey string `json:"filterKey"`
+			Values    string `json:"values"`
+		}{
+			{FilterKey: "fromAge", Values: age},
+		},
+		Keyword:       q.Keywords,
+		LocationID:    loc.LocationID,
+		LocationType:  locationMap[loc.LocationType],
+		NumJobsToShow: 30,
+		PageNumber:    1,
+	}, nil
 }
 
 func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, error) {
