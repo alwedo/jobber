@@ -6,11 +6,67 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
+	"testing/synctest"
+	"time"
 
+	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/retryhttp"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+func TestScrape(t *testing.T) {
+	synctest.Test(t, func(*testing.T) {
+		mock := &glassdoorMock{t: t}
+		g := &glassdoor{
+			client: retryhttp.NewWithTransport(mock),
+			logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
+			lCache: sync.Map{},
+		}
+		result, err := g.Scrape(context.Background(), &db.GetQueryScraperRow{
+			Keywords: "developer",
+			Location: "germany",
+		})
+		if err != nil {
+			t.Errorf("scraper failed: %v", err)
+		}
+
+		if len(result) != 83 {
+			t.Fatalf("wanted 83 offers, got %d", len(result))
+		}
+
+		wantFirstResult := db.CreateOfferParams{
+			ID:          "1010007206002",
+			Title:       "Lead Backend Engineer | PHP Symfony",
+			Company:     "Dyflexis",
+			Location:    "Köln",
+			PostedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			Description: "Earn up to €7,000 per month based on experience and work hybrid (2 days per week at our offices in Den Haag or Cologne). 25 vacation days + your birthday off.",
+			Source:      "Glassdoor",
+			Url:         "https://www.glassdoor.de/job-listing/lead-backend-engineer-php-symfony-dyflexis-JV_IC5023222_KO0,33_KE34,42.htm?jl=1010007206002",
+		}
+		if !reflect.DeepEqual(wantFirstResult, result[0]) {
+			t.Errorf("wanted first jobListing to be %v, got %v", wantFirstResult, result[0])
+		}
+
+		wantLastResult := db.CreateOfferParams{
+			ID:       "1010007519935",
+			Title:    "Senior Cloud Solution Developer (m/w/d)",
+			Company:  "Sopra Steria",
+			Location: "Deutschland",
+			// The last job offer as an `ageInDays` of 1, so  we expect the PostedAt date to be now - 1 day.
+			PostedAt:    pgtype.Timestamptz{Time: time.Now().Add(-24 * time.Hour), Valid: true},
+			Description: "Wir sind als eine der führenden europäischen Management- und Technologieberatungen ein echter Tech-Player. Wir sehen uns als Vordenker*innen, handeln und denken…",
+			Source:      "Glassdoor",
+			Url:         "https://www.glassdoor.de/job-listing/senior-cloud-solution-developer-mwd-sopra-steria-JV_KO0,35_KE36,48.htm?jl=1010007519935",
+		}
+		if !reflect.DeepEqual(wantLastResult, result[len(result)-1]) {
+			t.Errorf("wanted last jobListing to be %v, got %v", wantLastResult, result[len(result)-1])
+		}
+	})
+}
 
 func TestFetchLocation(t *testing.T) {
 	tests := []struct {
