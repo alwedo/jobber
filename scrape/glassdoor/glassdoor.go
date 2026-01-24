@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -99,32 +98,28 @@ func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([
 	return []db.CreateOfferParams{}, nil
 }
 
-func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (response, error) {
-	var r response
+func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response, error) {
 	jsonBody, err := json.Marshal(rb)
 	if err != nil {
-		return r, fmt.Errorf("unable to marshal body in glassdoor.fetchOffers: %w", err)
+		return nil, fmt.Errorf("unable to marshal body in glassdoor.fetchOffers: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+searchEndpoint, bytes.NewReader(jsonBody))
 	if err != nil {
-		return r, fmt.Errorf("unable to create http request in glassdoor.fetchOffers: %w", err)
+		return nil, fmt.Errorf("unable to create http request in glassdoor.fetchOffers: %w", err)
 	}
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return r, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w", err)
+		return nil, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return r, fmt.Errorf("unable to read response body in glassdoor.fetchOffers: %w", err)
+	var r = &response{}
+	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal response in glassdoor.fetchOffers: %w", err)
 	}
 
-	if err := json.Unmarshal(body, &r); err != nil {
-		return r, fmt.Errorf("unable to unmarshal response in glassdoor.fetchOffers: %w", err)
-	}
 	return r, nil
 }
 
