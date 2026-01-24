@@ -46,7 +46,6 @@ type response struct {
 			Cursor     string `json:"cursor"`
 			PageNumber int    `json:"pageNumber"`
 		} `json:"paginationCursors"`
-		TotalJobCount int `json:"totalJobCount"`
 	} `json:"data"`
 }
 
