@@ -50,7 +50,7 @@ func TestScrape(t *testing.T) {
 			Url:         "https://www.glassdoor.de/job-listing/lead-backend-engineer-php-symfony-dyflexis-JV_IC5023222_KO0,33_KE34,42.htm?jl=1010007206002",
 		}
 		if !reflect.DeepEqual(wantFirstResult, result[0]) {
-			t.Errorf("wanted first jobListing to be %v, got %v", wantFirstResult, result[0])
+			t.Errorf("wanted first jobListing to be:\n%v\ngot:\n%v\n", wantFirstResult, result[0])
 		}
 
 		wantLastResult := db.CreateOfferParams{
@@ -59,13 +59,13 @@ func TestScrape(t *testing.T) {
 			Company:  "Sopra Steria",
 			Location: "Deutschland",
 			// The last job offer as an `ageInDays` of 1, so  we expect the PostedAt date to be now - 1 day.
-			PostedAt:    pgtype.Timestamptz{Time: time.Now().Add(-24 * time.Hour), Valid: true},
+			PostedAt:    pgtype.Timestamptz{Time: time.Now().AddDate(0, 0, -1), Valid: true},
 			Description: "Wir sind als eine der führenden europäischen Management- und Technologieberatungen ein echter Tech-Player. Wir sehen uns als Vordenker*innen, handeln und denken…",
 			Source:      "Glassdoor",
 			Url:         "https://www.glassdoor.de/job-listing/senior-cloud-solution-developer-mwd-sopra-steria-JV_KO0,35_KE36,48.htm?jl=1010007519935",
 		}
 		if !reflect.DeepEqual(wantLastResult, result[len(result)-1]) {
-			t.Errorf("wanted last jobListing to be %v, got %v", wantLastResult, result[len(result)-1])
+			t.Errorf("wanted last jobListing to be:\n%v\ngot:\n%v\n", wantLastResult, result[len(result)-1])
 		}
 	})
 }
