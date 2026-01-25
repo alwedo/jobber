@@ -8,11 +8,14 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/scrape/retryhttp"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -42,12 +45,12 @@ type location struct {
 type response struct {
 	Data struct {
 		JobListings struct {
-			JobListings []offer `json:"jobListings"`
+			JobListings       []offer `json:"jobListings"`
+			PaginationCursors []struct {
+				Cursor     string `json:"cursor"`
+				PageNumber int    `json:"pageNumber"`
+			} `json:"paginationCursors"`
 		} `json:"jobListings"`
-		PaginationCursors []struct {
-			Cursor     string `json:"cursor"`
-			PageNumber int    `json:"pageNumber"`
-		} `json:"paginationCursors"`
 	} `json:"data"`
 }
 
@@ -60,9 +63,9 @@ type offer struct {
 			SEOJobLink             string `json:"seoJobLink"`
 		} `json:"header"`
 		Job struct {
-			DescriptionFragmentText []string `json:"descriptionFragmentText"`
-			JobTitleText            string   `json:"jobTitleText"`
-			ListingID               int      `json:"listingId"`
+			DescriptionFragmentsText []string `json:"descriptionFragmentsText"`
+			JobTitleText             string   `json:"jobTitleText"`
+			ListingID                int      `json:"listingId"`
 		} `json:"job"`
 	} `json:"jobView"`
 }
@@ -95,7 +98,54 @@ func New(l *slog.Logger) *glassdoor { //nolint: revive
 }
 
 func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
-	return []db.CreateOfferParams{}, nil
+	offers := []db.CreateOfferParams{}
+
+	body, err := g.newRequestBody(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create newRequestBody in glassdoor.Scrape: %w", err)
+	}
+
+scrape:
+	for nextPage := 2; ; nextPage++ {
+		resp, err := g.fetchOffers(ctx, body)
+		if err != nil {
+			// If fetchOffers fails we return the accumulated offers so far and the error.
+			return offers, fmt.Errorf("failed to fetchOffers in glassdoor.Scrape: %w", err)
+		}
+
+		for _, o := range resp.Data.JobListings.JobListings {
+			// Glassdoor returns only an ageInDays value for when the offer
+			// was published. We use time.Now for our timestamps and substract
+			// the amount of days from ageInDays when it's not 0.
+			t := time.Now()
+			if o.JobView.Header.AgeInDays > 0 {
+				t = t.AddDate(0, 0, -o.JobView.Header.AgeInDays)
+			}
+
+			offers = append(offers, db.CreateOfferParams{
+				ID:          strconv.Itoa(o.JobView.Job.ListingID),
+				Title:       o.JobView.Job.JobTitleText,
+				Company:     o.JobView.Header.EmployerNameFromSearch,
+				Location:    o.JobView.Header.LocationName,
+				PostedAt:    pgtype.Timestamptz{Time: t, Valid: true},
+				Description: strings.Join(o.JobView.Job.DescriptionFragmentsText, " "),
+				Source:      Name,
+				Url:         o.JobView.Header.SEOJobLink,
+			})
+		}
+
+		// Check for the next page in paginationCursors
+		for _, pagCur := range resp.Data.JobListings.PaginationCursors {
+			if pagCur.PageNumber == nextPage {
+				body.PageCursor = pagCur.Cursor
+				body.PageNumber = pagCur.PageNumber
+				continue scrape
+			}
+		}
+		break
+	}
+
+	return offers, nil
 }
 
 func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response, error) {
