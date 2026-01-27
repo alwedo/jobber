@@ -34,6 +34,7 @@ var (
 	Mock          = &mock{}
 	MockWithErr   = &mock{mockErr: fmt.Errorf("error")}
 	MockWithDelay = &mock{delay: 150 * time.Millisecond}
+	MockWithPanic = &mock{panic: true}
 	MockList      = List{"Mock": Mock}
 )
 
@@ -41,6 +42,7 @@ type mock struct {
 	LastQuery *db.GetQueryScraperRow
 	mockErr   error
 	delay     time.Duration
+	panic     bool
 }
 
 func (m *mock) Scrape(_ context.Context, q *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
@@ -48,6 +50,9 @@ func (m *mock) Scrape(_ context.Context, q *db.GetQueryScraperRow) ([]db.CreateO
 	time.Sleep(m.delay)
 	if m.mockErr != nil {
 		return nil, m.mockErr
+	}
+	if m.panic {
+		panic("panic from inside the mock")
 	}
 	return []db.CreateOfferParams{
 		{Title: q.Keywords + " jobs in " + q.Location},

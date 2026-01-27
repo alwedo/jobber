@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -238,4 +239,17 @@ func TestRunQuery(t *testing.T) {
 			t.Errorf("query should have been deleted but got: %v", err)
 		}
 	})
+}
+
+func TestScheduledJobWithPanic(t *testing.T) {
+	l := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
+	d, dbCloser := db.NewTestDB(t)
+	defer dbCloser()
+
+	j, jCloser := New(l, d, WithScrapeList(scrape.List{"mock": scrape.MockWithPanic}))
+	defer jCloser()
+
+	if err := j.CreateQuery("bla", "panic"); err != nil {
+		t.Errorf("wanted no err, got: %v", err)
+	}
 }

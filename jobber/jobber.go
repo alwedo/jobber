@@ -225,7 +225,18 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	var stagger int
 
 	for name := range j.scrList {
-		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, name)}
+		opts := []gocron.JobOption{
+			gocron.WithTags(q.Keywords+q.Location, name),
+			gocron.WithEventListeners(gocron.AfterJobRunsWithPanic(func(_ uuid.UUID, _ string, data any) {
+				j.logger.Error("panic after job run",
+					slog.Int64("qID", q.ID),
+					slog.String("keywords", q.Keywords),
+					slog.String("location", q.Location),
+					slog.String("scraper", name),
+					slog.Any("panic data", data),
+				)
+			})),
+		}
 		opts = append(opts, o...)
 		cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute()+stagger)
 		stagger++
