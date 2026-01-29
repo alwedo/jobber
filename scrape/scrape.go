@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/alwedo/jobber/db"
+	"github.com/alwedo/jobber/scrape/glassdoor"
 	"github.com/alwedo/jobber/scrape/linkedin"
 	"github.com/alwedo/jobber/scrape/stepstone"
 )
@@ -25,8 +26,9 @@ type List map[string]Scraper
 // New returns a list of all available scrapers.
 func New(l *slog.Logger) List {
 	return List{
-		linkedin.Name:  linkedin.New(l),
 		stepstone.Name: stepstone.New(l),
+		linkedin.Name:  linkedin.New(l),
+		glassdoor.Name: glassdoor.New(),
 	}
 }
 

@@ -1,0 +1,1979 @@
+{
+  "data": {
+    "jobListings": {
+      "companyFilterOptions": [
+        {
+          "id": 2915109,
+          "shortName": "CRX Markets"
+        },
+        {
+          "id": 1681100,
+          "shortName": "KA Resources"
+        },
+        {
+          "id": 2931204,
+          "shortName": "Wandelbots"
+        },
+        {
+          "id": 2794696,
+          "shortName": "Mund Inc"
+        },
+        {
+          "id": 7700949,
+          "shortName": "AeroVect Technologies"
+        },
+        {
+          "id": 2879858,
+          "shortName": "Dyflexis"
+        },
+        {
+          "id": 7700783,
+          "shortName": "agital.online"
+        },
+        {
+          "id": 4138,
+          "shortName": "Accenture"
+        },
+        {
+          "id": 1532817,
+          "shortName": "ROSE Bikes"
+        },
+        {
+          "id": 1482748,
+          "shortName": "Octopus Energy"
+        },
+        {
+          "id": 9890359,
+          "shortName": "Tri.Merge"
+        },
+        {
+          "id": 1197566,
+          "shortName": "secunet"
+        },
+        {
+          "id": 1113005,
+          "shortName": "Contabo"
+        },
+        {
+          "id": 1153587,
+          "shortName": "Correlation One"
+        },
+        {
+          "id": 7799549,
+          "shortName": "Mesalvo"
+        },
+        {
+          "id": 6198073,
+          "shortName": "BORA (Austria)"
+        },
+        {
+          "id": 2118067,
+          "shortName": "Schmitt Engineering"
+        },
+        {
+          "id": 10471,
+          "shortName": "SAP"
+        },
+        {
+          "id": 1141851,
+          "shortName": "Da Vinci Engineering"
+        },
+        {
+          "id": 1800227,
+          "shortName": "Wolt"
+        }
+      ],
+      "indeedCtk": "1jfl5fb18l028801",
+      "indexablePageForSeo": true,
+      "jobListings": [
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 5162328,
+                "name": "osapiens Services GmbH ",
+                "ratings": {
+                  "overallRating": 3.6
+                },
+                "shortName": "osapiens Services"
+              },
+              "employerNameFromSearch": "osapiens",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "back end engineer (m/w/d)",
+              "gocId": 102629,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=301&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_5f8b25cc&cb=1769163173174&jobListingId=1010007342593&jrtk=5-yul1-0-1jfl5fb1sjn2j800-30656ec7397b6385",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-30656ec7397b6385",
+              "jobTitleText": "Java Backend Engineer (m/f/x)",
+              "locId": 2598197,
+              "locationName": "Mannheim",
+              "locationType": "C",
+              "normalizedJobTitle": "back end engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/java-backend-engineer-mfx-osapiens-JV_IC2598197_KO0,25_KE26,34.htm?jl=1010007342593"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Mentor & Review: Support junior developers and conduct peer code reviews to uphold high-quality coding standards."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Java Backend Engineer (m/f/x)",
+              "listingId": 1010007342593
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "osapiens Services",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/5162328/osapiens-services-squareLogo-1692879307349.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 1336608,
+                "name": "Railnova",
+                "ratings": {
+                  "overallRating": 4.0
+                },
+                "shortName": "Railnova"
+              },
+              "employerNameFromSearch": "Railnova",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "business developer (m/w/d)",
+              "gocId": 102477,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=302&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_034913d7&cb=1769163173174&jobListingId=1009588105973&jrtk=5-yul1-0-1jfl5fb1sjn2j800-7651cfb81bd9dfe2",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-7651cfb81bd9dfe2",
+              "jobTitleText": "Railnova DACH Senior Business Developer",
+              "locId": 5023222,
+              "locationName": "Köln",
+              "locationType": "C",
+              "normalizedJobTitle": "business developer",
+              "occupations": [
+                {
+                  "key": "K7RMC"
+                },
+                {
+                  "key": "KTKTG"
+                },
+                {
+                  "key": "MGTWW"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/railnova-dach-senior-business-developer-railnova-JV_IC5023222_KO0,39_KE40,48.htm?jl=1009588105973"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "We design our own hardware and software to connect train fleets and monitor all business critical parameters. With Railnova, our railway clients are alerted in…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Railnova DACH Senior Business Developer",
+              "listingId": 1009588105973
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Railnova",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/1336608/railnova-squarelogo-1572865667661.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": false,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 1141851,
+                "name": "Da Vinci Engineering GmbH",
+                "ratings": {
+                  "overallRating": 3.8
+                },
+                "shortName": "Da Vinci Engineering"
+              },
+              "employerNameFromSearch": "Da Vinci Engineering GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "ingenieur (m/w/d)",
+              "gocId": 102465,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=303&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&cs=1_a18da625&cb=1769163173174&jobListingId=1010007088931&jrtk=5-yul1-0-1jfl5fb1sjn2j800-bf7e9b0c76583b44",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-bf7e9b0c76583b44",
+              "jobTitleText": "Expert Algorithm Engineer, Vehicle Control",
+              "locId": 2632180,
+              "locationName": "Frankfurt am Main",
+              "locationType": "C",
+              "normalizedJobTitle": "engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "AFCY5"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/expert-algorithm-engineer-vehicle-control-da-vinci-engineering-gmbh-JV_IC2632180_KO0,41_KE42,67.htm?jl=1010007088931"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Collaborate with cross-functional teams, including hardware engineers, software developers, and system integrators, to ensure comprehensive system validation…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Expert Algorithm Engineer, Vehicle Control",
+              "listingId": 1010007088931
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Da Vinci Engineering",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/1141851/da-vinci-engineering-squareLogo-1629093588205.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 3007587,
+                "name": "Gradle Inc.",
+                "ratings": {
+                  "overallRating": 4.1
+                },
+                "shortName": "Gradle Inc."
+              },
+              "employerNameFromSearch": "Gradle Technologies",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "back end engineer (m/w/d)",
+              "gocId": 102629,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=304&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_89b3c2e8&cb=1769163173174&jobListingId=1010007200396&jrtk=5-yul1-0-1jfl5fb1sjn2j800-88e1239f5d84223b",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-88e1239f5d84223b",
+              "jobTitleText": "Staff Backend Engineer",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "back end engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/staff-backend-engineer-gradle-technologies-JV_IC2622109_KO0,22_KE23,42.htm?jl=1010007200396"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Experience working on developer tools. While not necessarily build experts, they do exhibit a deep understanding and interest in the automation domain and in…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Staff Backend Engineer",
+              "listingId": 1010007200396
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Gradle Inc.",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/3007587/gradle-inc-squareLogo-1769088394417.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 952418,
+                "name": "brandung GmbH & Co. KG",
+                "ratings": {
+                  "overallRating": 3.7
+                },
+                "shortName": "brandung"
+              },
+              "employerNameFromSearch": "brandung GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareentwickler (m/w/d)",
+              "gocId": 300167,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=305&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_d4c82ad7&cb=1769163173175&jobListingId=1010007500707&jrtk=5-yul1-0-1jfl5fb1sjn2j800-35fc580d54fd7350",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-35fc580d54fd7350",
+              "jobTitleText": "(Senior) PHP Developer TYPO3 (w/m/d)",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "softwareentwickler (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-php-developer-typo3-wmd-brandung-gmbh-JV_IC2622109_KO0,30_KE31,44.htm?jl=1010007500707"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Dann werde Teil unseres agilen Teams und realisiere als TYPO3 Developer erfolgreiche Plattformprojekte für unsere Kunden."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "(Senior) PHP Developer TYPO3 (w/m/d)",
+              "listingId": 1010007500707
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "brandung",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/952418/brandung-squareLogo-1699537040746.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 1144673,
+                "name": "Raisin GmbH",
+                "ratings": {
+                  "overallRating": 4.0
+                },
+                "shortName": "Raisin"
+              },
+              "employerNameFromSearch": "Raisin",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "front end engineer (m/w/d)",
+              "gocId": 101929,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=306&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_60d2664c&cb=1769163173175&jobListingId=1010007120248&jrtk=5-yul1-0-1jfl5fb1sjn2j800-887385036c7e9593",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-887385036c7e9593",
+              "jobTitleText": "Engineering Lead – Frontend & Mobile Platform (m/f/d)",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "front end engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                },
+                {
+                  "key": "ZW3TH"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/engineering-lead-frontend-mobile-platform-mfd-raisin-JV_IC2622109_KO0,45_KE46,52.htm?jl=1010007120248"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "You will lead initiatives that improve developer productivity, standardize architecture, optimize CI/CD pipelines for web and mobile delivery, and ensure that…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Engineering Lead – Frontend & Mobile Platform (m/f/d)",
+              "listingId": 1010007120248
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Raisin",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/1144673/raisin-squareLogo-1756219236327.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 2857483,
+                "name": "Sternico GmbH",
+                "ratings": {
+                  "overallRating": 4.5
+                },
+                "shortName": "Sternico"
+              },
+              "employerNameFromSearch": "Sternico GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareentwickler (m/w/d)",
+              "gocId": 300167,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=307&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_0c89e7fb&cb=1769163173175&jobListingId=1010007151824&jrtk=5-yul1-0-1jfl5fb1sjn2j800-79b917810a451422",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-79b917810a451422",
+              "jobTitleText": "Senior Software Developer (m/w/d) Frontend Angular",
+              "locId": 2681731,
+              "locationName": "Wendeburg",
+              "locationType": "C",
+              "normalizedJobTitle": "softwareentwickler (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                },
+                {
+                  "key": "ZW3TH"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-software-developer-mwd-frontend-angular-sternico-gmbh-JV_IC2681731_KO0,46_KE47,60.htm?jl=1010007151824"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Du verantwortest die Neu- und Weiterentwicklung unseres hochmodernen CMMS (Computerized Maintenance Management System) RAILBASE – einer Plattform, die…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior Software Developer (m/w/d) Frontend Angular",
+              "listingId": 1010007151824
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Sternico",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/2857483/sternico-squarelogo-1567058341693.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 2931204,
+                "name": "Wandelbots GmbH",
+                "ratings": {
+                  "overallRating": 3.1
+                },
+                "shortName": "Wandelbots"
+              },
+              "employerNameFromSearch": "Wandelbots GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareingenieur (m/w/d)",
+              "gocId": 100063,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=308&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_d51dafc2&cb=1769163173175&jobListingId=1010007143266&jrtk=5-yul1-0-1jfl5fb1sjn2j800-1140a6cd491549c6",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-1140a6cd491549c6",
+              "jobTitleText": "Software Engineer (gn) Business Acceleration",
+              "locId": 2610266,
+              "locationName": "Dresden",
+              "locationType": "C",
+              "normalizedJobTitle": "software engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/software-engineer-gn-business-acceleration-wandelbots-gmbh-JV_IC2610266_KO0,42_KE43,58.htm?jl=1010007143266"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "As a full-stack problem solver you are a product-minded software developer, adept in creating customer-centric products."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Software Engineer (gn) Business Acceleration",
+              "listingId": 1010007143266
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Wandelbots",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/2931204/wandelbots-squarelogo-1585135130565.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 9890359,
+                "name": "Tri.Merge GmbH",
+                "ratings": {
+                  "overallRating": 5.0
+                },
+                "shortName": "Tri.Merge"
+              },
+              "employerNameFromSearch": "Tri.Merge GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareingenieur (m/w/d)",
+              "gocId": 300063,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=309&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_7e5a81a5&cb=1769163173175&jobListingId=1010007144681&jrtk=5-yul1-0-1jfl5fb1sjn2j800-3f100f6a47c09acc",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-3f100f6a47c09acc",
+              "jobTitleText": "Senior Developer - Embedded Software *",
+              "locId": 2566818,
+              "locationName": "Friedrichshafen",
+              "locationType": "C",
+              "normalizedJobTitle": "softwareingenieur (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "AFCY5"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-developer-embedded-software-tri-merge-gmbh-JV_IC2566818_KO0,34_KE35,49.htm?jl=1010007144681"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Du hast ein abgeschlossenes Studium der Informatik, Elektrotechnik oder eine vergleichbare Qualifikation. Wir setzen auf Vielfalt, lehnen Diskriminierung ab und…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior Developer - Embedded Software *",
+              "listingId": 1010007144681
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Tri.Merge",
+              "squareLogoUrl": null
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 1342439,
+                "name": "MOBISYS Mobile Informationssysteme GmbH",
+                "ratings": {
+                  "overallRating": 5.0
+                },
+                "shortName": "MOBISYS Mobile Informationssysteme"
+              },
+              "employerNameFromSearch": "mobisys GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "business developer (m/w/d)",
+              "gocId": 302477,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=310&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_66fd8c84&cb=1769163173175&jobListingId=1010007145586&jrtk=5-yul1-0-1jfl5fb1sjn2j800-850386465a391cfd",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-850386465a391cfd",
+              "jobTitleText": "SAP EWM Developer (m/w/d)",
+              "locId": 2626272,
+              "locationName": "Mörfelden-Walldorf",
+              "locationType": "C",
+              "normalizedJobTitle": "business developer (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/sap-ewm-developer-mwd-mobisys-gmbh-JV_IC2626272_KO0,21_KE22,34.htm?jl=1010007145586"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Unsere Projektentwicklung setzt sich aus mehreren erfahrenen SAP-Entwickler*innen zusammen, die sich vorrangig mit Kundenprojekten rund um mobile SAP-…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "SAP EWM Developer (m/w/d)",
+              "listingId": 1010007145586
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "MOBISYS Mobile Informationssysteme",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/1342439/mobisys-mobile-informationssysteme-squarelogo-1575031694814.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 3073509,
+                "name": "KRUU GmbH",
+                "ratings": {
+                  "overallRating": 4.0
+                },
+                "shortName": "KRUU"
+              },
+              "employerNameFromSearch": "KRUU GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareentwickler (m/w/d)",
+              "gocId": 300167,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=311&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_b2bd304a&cb=1769163173175&jobListingId=1010007492639&jrtk=5-yul1-0-1jfl5fb1sjn2j800-0f5fec9be2f90feb",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-0f5fec9be2f90feb",
+              "jobTitleText": "Senior PHP/Symfony Developer (m/w/d) – Wenn du weißt, was du tust",
+              "locId": 4990441,
+              "locationName": "Bad Friedrichshall",
+              "locationType": "C",
+              "normalizedJobTitle": "softwareentwickler (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-php-symfony-developer-mwd-wenn-du-weißt-was-du-tust-kruu-gmbh-JV_IC4990441_KO0,58_KE59,68.htm?jl=1010007492639"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Dein Privatleben liegt uns am Herzen – flexible Arbeitszeiten, 30 Urlaubstage und kostenlose Verpflegung sind bei uns selbstverständlich."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior PHP/Symfony Developer (m/w/d) – Wenn du weißt, was du tust",
+              "listingId": 1010007492639
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "KRUU",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/3073509/kruu-squarelogo-1580300691689.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": null,
+                "bestPlacesToWork": null,
+                "id": 0,
+                "name": null,
+                "ratings": null,
+                "shortName": null
+              },
+              "employerNameFromSearch": "24-LOG GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "business developer (m/w/d)",
+              "gocId": 302477,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=312&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_daaaad2c&cb=1769163173175&jobListingId=1010007811079&jrtk=5-yul1-0-1jfl5fb1sjn2j800-bbacf741b3252fd3",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-bbacf741b3252fd3",
+              "jobTitleText": "ABAP/SAP UI5 Developer - Vollzeit (m/w/d)",
+              "locId": 2501526,
+              "locationName": "Passau",
+              "locationType": "C",
+              "normalizedJobTitle": "business developer (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/abap-sap-ui5-developer-vollzeit-mwd-24-log-gmbh-JV_IC2501526_KO0,35_KE36,47.htm?jl=1010007811079"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Wir sind die 24 Log GmbH, ein innovatives und wachsendes Unternehmen im Bereich der SAP Logistik. Mit unseren SAP-basierten IT-Logistiklösungen und…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "ABAP/SAP UI5 Developer - Vollzeit (m/w/d)",
+              "listingId": 1010007811079
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": null,
+              "squareLogoUrl": null
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 662646,
+                "name": "Trinetix Solutions",
+                "ratings": {
+                  "overallRating": 4.3
+                },
+                "shortName": "Trinetix"
+              },
+              "employerNameFromSearch": "Trinetix",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "back end engineer (m/w/d)",
+              "gocId": 102629,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=313&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_d91b377a&cb=1769163173175&jobListingId=1010007476604&jrtk=5-yul1-0-1jfl5fb1sjn2j800-ad0bcc842913ac9e",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-ad0bcc842913ac9e",
+              "jobTitleText": "Senior Backend Engineer (.NET, Azure, SQL Server)",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "back end engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-backend-engineer-net-azure-sql-server-trinetix-JV_IC2622109_KO0,44_KE45,53.htm?jl=1010007476604"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Collaborate with frontend developers to deliver stable, well-designed APIs. The role focuses on building, evolving, and operating a ."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior Backend Engineer (.NET, Azure, SQL Server)",
+              "listingId": 1010007476604
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Trinetix",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/662646/trinetix-squarelogo-1541494501792.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 2901655,
+                "name": "matelso GmbH",
+                "ratings": {
+                  "overallRating": -0.10000000149011612
+                },
+                "shortName": "matelso"
+              },
+              "employerNameFromSearch": "matelso GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "webentwickler (m/w/d)",
+              "gocId": 300124,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=314&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_73fe60af&cb=1769163173176&jobListingId=1009276604568&jrtk=5-yul1-0-1jfl5fb1sjn2j800-b45e11bc47369dda",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-b45e11bc47369dda",
+              "jobTitleText": "Senior Software Developer Backend C#/ .NET (m/w/d)",
+              "locId": 2794942,
+              "locationName": "Kaiserslautern",
+              "locationType": "C",
+              "normalizedJobTitle": "webentwickler (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-software-developer-backend-c-net-mwd-matelso-gmbh-JV_IC2794942_KO0,43_KE44,56.htm?jl=1009276604568"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Du bringst Dich gemäß deiner Talente und Leidenschaften in ein agiles Entwicklerteam ein, welches im gesamten Anwendungslebenszyklus von strategischer Planung…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior Software Developer Backend C#/ .NET (m/w/d)",
+              "listingId": 1009276604568
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "matelso",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/2901655/matelso-squareLogo-1616578809379.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": false,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 4523274,
+                "name": "Storyblok GmbH",
+                "ratings": {
+                  "overallRating": 4.3
+                },
+                "shortName": "Storyblok"
+              },
+              "employerNameFromSearch": "Storyblok",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "ingenieur für verpackungstechnik (m/w/d)",
+              "gocId": 100559,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=315&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&cs=1_6b810d89&cb=1769163173176&jobListingId=1010008250907&jrtk=5-yul1-0-1jfl5fb1sjn2j800-fa25bc6234fc54af",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-fa25bc6234fc54af",
+              "jobTitleText": "Senior DevOps Engineer",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "packaging engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                },
+                {
+                  "key": "J94W5"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-devops-engineer-storyblok-JV_IC2622109_KO0,22_KE23,32.htm?jl=1010008250907"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Marketers get a visual editor with reusable components, in-context preview, and workflows to launch fast and stay on brand. VSOP (Virtual Stock Option Plan)."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior DevOps Engineer",
+              "listingId": 1010008250907
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Storyblok",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/4523274/storyblok-squareLogo-1736801638583.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": false,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 4138,
+                "name": "Accenture Ltd",
+                "ratings": {
+                  "overallRating": 3.7
+                },
+                "shortName": "Accenture"
+              },
+              "employerNameFromSearch": "Accenture",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "sonstige",
+              "gocId": 0,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": true,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=316&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&cs=1_5eb955cf&cb=1769163173176&jobListingId=1010007484237&jrtk=5-yul1-0-1jfl5fb1sjn2j800-c060bfb6bc16cdb1",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-c060bfb6bc16cdb1",
+              "jobTitleText": "Ausbildung zum Fachinformatiker für Anwendungsentwicklung (all genders)",
+              "locId": 2487824,
+              "locationName": "Würzburg",
+              "locationType": "C",
+              "normalizedJobTitle": null,
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/ausbildung-zum-fachinformatiker-für-anwendungsentwicklung-all-genders-accenture-JV_IC2487824_KO0,69_KE70,79.htm?jl=1010007484237"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Dann werde noch dieses Jahr ab September 2026 Teil unseres Teams und tauche in die SAP-Welt ein. Bei uns erhältst du die Möglichkeit all die Dinge zu erlernen,…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Ausbildung zum Fachinformatiker für Anwendungsentwicklung (all genders)",
+              "listingId": 1010007484237
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Accenture",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/4138/accenture-squareLogo-1709650590794.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 1800227,
+                "name": "Wolt Enterprises B.V",
+                "ratings": {
+                  "overallRating": 3.4
+                },
+                "shortName": "Wolt"
+              },
+              "employerNameFromSearch": "Wolt - English",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareingenieur (m/w/d)",
+              "gocId": 100063,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=317&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_1f7d10ee&cb=1769163173177&jobListingId=1009823162162&jrtk=5-yul1-0-1jfl5fb1sjn2j800-29a9cef8acf95f73",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-29a9cef8acf95f73",
+              "jobTitleText": "Software Engineer - Build & Deploy, Core Group",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "software engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                },
+                {
+                  "key": "J94W5"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/software-engineer-build-deploy-core-group-wolt-english-JV_IC2622109_KO0,41_KE42,54.htm?jl=1009823162162"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Cultivate a deep understanding of how your systems impact our developers and other systems. Drive data-driven decisions to enhance the developer experience and…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Software Engineer - Build & Deploy, Core Group",
+              "listingId": 1009823162162
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Wolt",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/1800227/wolt-squarelogo-1580132062790.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 2955477,
+                "name": "Hitschler International GmbH & Co. KG",
+                "ratings": {
+                  "overallRating": 2.0
+                },
+                "shortName": "Hitschler"
+              },
+              "employerNameFromSearch": "hitschler International GmbH & Co. KG",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "webentwickler (m/w/d)",
+              "gocId": 300124,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=318&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_0dbafad8&cb=1769163173176&jobListingId=1010007139669&jrtk=5-yul1-0-1jfl5fb1sjn2j800-989c263b17f689d6",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-989c263b17f689d6",
+              "jobTitleText": "E-Commerce Web Developer* (Shopify)",
+              "locId": 2820974,
+              "locationName": "Hürth",
+              "locationType": "C",
+              "normalizedJobTitle": "webentwickler (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                },
+                {
+                  "key": "ZW3TH"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/e-commerce-web-developer-shopify-hitschler-international-gmbh-co-kg-JV_IC2820974_KO0,32_KE33,67.htm?jl=1010007139669"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Und wir freuen uns, wenn du Teil des hitschies-Teams werden willst. Du verantwortest die Migration auf Hydrogen (Headless Shopify) und treibst die Entwicklung…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "E-Commerce Web Developer* (Shopify)",
+              "listingId": 1010007139669
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Hitschler",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/2955477/hitschler-squarelogo-1635846843723.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 1056642,
+                "name": "Vestiaire Collective",
+                "ratings": {
+                  "overallRating": 3.2
+                },
+                "shortName": "Vestiaire Collective"
+              },
+              "employerNameFromSearch": "Vestiaire Collective",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareingenieur (m/w/d)",
+              "gocId": 100063,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=319&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_aa9ceffd&cb=1769163173176&jobListingId=1010007432815&jrtk=5-yul1-0-1jfl5fb1sjn2j800-c75f38e49116d391",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-c75f38e49116d391",
+              "jobTitleText": "Senior Software Engineer - Berlin",
+              "locId": 2622109,
+              "locationName": "Berlin",
+              "locationType": "C",
+              "normalizedJobTitle": "software engineer",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EG6MP"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-software-engineer-berlin-vestiaire-collective-JV_IC2622109_KO0,31_KE32,52.htm?jl=1010007432815"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Continuously improve system performance, reliability, and the overall developer experience. The Offer Management squad is at the heart of how buyers and sellers…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior Software Engineer - Berlin",
+              "listingId": 1010007432815
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Vestiaire Collective",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/1056642/vestiaire-collective-squarelogo-1585147728773.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 7301753,
+                "name": "Fink IT-Solutions GmbH & Co. KG",
+                "ratings": {
+                  "overallRating": 4.2
+                },
+                "shortName": "Fink IT-Solutions"
+              },
+              "employerNameFromSearch": "Fink IT-Solutions GmbH & Co. KG",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "sonstige",
+              "gocId": 0,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=320&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_1c92327e&cb=1769163173176&jobListingId=1010007497971&jrtk=5-yul1-0-1jfl5fb1sjn2j800-30e9bb5f290c9784",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-30e9bb5f290c9784",
+              "jobTitleText": "Ausbildung zum Fachinformatiker für Anwendungsentwicklung (m/w/d)",
+              "locId": 2487824,
+              "locationName": "Würzburg",
+              "locationType": "C",
+              "normalizedJobTitle": null,
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/ausbildung-zum-fachinformatiker-für-anwendungsentwicklung-mwd-fink-it-solutions-gmbh-co-kg-JV_IC2487824_KO0,61_KE62,90.htm?jl=1010007497971"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "(Cloudbasierte) Entwicklung von Apps und Schnittstellen zu anderen Anwendungen - für unsere eigenen Softwareprodukte sowie für unsere Kunden."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Ausbildung zum Fachinformatiker für Anwendungsentwicklung (m/w/d)",
+              "listingId": 1010007497971
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Fink IT-Solutions",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/7301753/fink-it-solutions-squarelogo-1656932237819.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": true,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 2889058,
+                "name": "Cloudogu GmbH",
+                "ratings": {
+                  "overallRating": 4.7
+                },
+                "shortName": "Cloudogu"
+              },
+              "employerNameFromSearch": "Cloudogu GmbH",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "devops engineer (m/w/d)",
+              "gocId": 302489,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=321&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&ea=1&cs=1_121e43e1&cb=1769163173176&jobListingId=1010007230167&jrtk=5-yul1-0-1jfl5fb1sjn2j800-0be921fc2bb2e501",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-0be921fc2bb2e501",
+              "jobTitleText": "DevOps Engineer (m/w/d)",
+              "locId": 2478822,
+              "locationName": "Braunschweig",
+              "locationType": "C",
+              "normalizedJobTitle": "devops engineer (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                },
+                {
+                  "key": "J94W5"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/devops-engineer-mwd-cloudogu-gmbh-JV_IC2478822_KO0,19_KE20,33.htm?jl=1010007230167"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Du entwickelst und betreibst CI/CD- und GitOps-Workflows und hilfst dabei, Deployments, Tests, Security Scans und Releases zu automatisieren."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "DevOps Engineer (m/w/d)",
+              "listingId": 1010007230167
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Cloudogu",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/2889058/cloudogu-squarelogo-1570600331640.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 0,
+              "easyApply": false,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 947678,
+                "name": "Unity AG",
+                "ratings": {
+                  "overallRating": 4.3
+                },
+                "shortName": "UNITY AG"
+              },
+              "employerNameFromSearch": "Unity AG",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "softwareentwickler (m/w/d)",
+              "gocId": 300167,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=322&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&cs=1_ec7ba064&cb=1769163173176&jobListingId=1009419988226&jrtk=5-yul1-0-1jfl5fb1sjn2j800-49323dc06f24a880",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-49323dc06f24a880",
+              "jobTitleText": "Werkstudent Software Developer - Smart City Open Source",
+              "locId": 96,
+              "locationName": "Deutschland",
+              "locationType": "N",
+              "normalizedJobTitle": "softwareentwickler (m/w/d)",
+              "occupations": [
+                {
+                  "key": "5NN53"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "HJSX6"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/werkstudent-software-developer-smart-city-open-source-unity-ag-JV_KO0,53_KE54,62.htm?jl=1009419988226"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Kreatives Arbeiten an Softwarearchitekturen und deren Umsetzung. Erarbeitung von Anforderungen und Lösungsideen unsere Produktentwicklung."
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Werkstudent Software Developer - Smart City Open Source",
+              "listingId": 1009419988226
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "UNITY AG",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/947678/unity-squarelogo-1450410541341.png"
+            }
+          }
+        },
+        {
+          "jobview": {
+            "header": {
+              "adOrderId": 1136043,
+              "ageInDays": 1,
+              "easyApply": false,
+              "employer": {
+                "bestLedCompanies": [],
+                "bestPlacesToWork": [],
+                "id": 466295,
+                "name": "Sopra Steria",
+                "ratings": {
+                  "overallRating": 3.6
+                },
+                "shortName": "Sopra Steria"
+              },
+              "employerNameFromSearch": "Sopra Steria",
+              "employerSpotlight": null,
+              "expired": false,
+              "goc": "solutions developer (m/w/d) ",
+              "gocId": 301341,
+              "indeedJobAttribute": null,
+              "isSponsoredEmployer": false,
+              "isSponsoredJob": false,
+              "jobCountryId": 96,
+              "jobLink": "/partner/jobListing.htm?pos=323&ao=1136043&s=58&guid=0000019bea57abdbabdcf596bb8f7b97&src=GD_JOB_AD&t=SR&vt=w&cs=1_e13cae4b&cb=1769163173176&jobListingId=1010007519935&jrtk=5-yul1-0-1jfl5fb1sjn2j800-b3f48ea99f0d5b0a",
+              "jobResultTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800-b3f48ea99f0d5b0a",
+              "jobTitleText": "Senior Cloud Solution Developer (m/w/d)",
+              "locId": 96,
+              "locationName": "Deutschland",
+              "locationType": "N",
+              "normalizedJobTitle": "solutions developer (m/w/d) ",
+              "occupations": [
+                {
+                  "key": "CZVKW"
+                },
+                {
+                  "key": "EHPW9"
+                },
+                {
+                  "key": "N7QGU"
+                },
+                {
+                  "key": "TA8S5"
+                }
+              ],
+              "payCurrency": "EUR",
+              "payPeriod": null,
+              "payPeriodAdjustedPay": null,
+              "salarySource": null,
+              "savedJobId": null,
+              "seoJobLink": "https://www.glassdoor.de/job-listing/senior-cloud-solution-developer-mwd-sopra-steria-JV_KO0,35_KE36,48.htm?jl=1010007519935"
+            },
+            "job": {
+              "descriptionFragmentsText": [
+                "Wir sind als eine der führenden europäischen Management- und Technologieberatungen ein echter Tech-Player. Wir sehen uns als Vordenker*innen, handeln und denken…"
+              ],
+              "importConfigId": 322429,
+              "jobTitleId": 0,
+              "jobTitleText": "Senior Cloud Solution Developer (m/w/d)",
+              "listingId": 1010007519935
+            },
+            "jobListingAdminDetails": {
+              "userEligibleForAdminJobDetails": false
+            },
+            "overview": {
+              "shortName": "Sopra Steria",
+              "squareLogoUrl": "https://media.glassdoor.com/sql/466295/sopra-steria-squareLogo-1612703737891.png"
+            }
+          }
+        }
+      ],
+      "jobSearchTrackingKey": "5-yul1-0-1jfl5fb1sjn2j800",
+      "jobsPageSeoData": {
+        "pageMetaDescription": "Nach Developer-Jobs in Deutschland mit Bewertungen und Gehältern suchen. 79 Jobs für Developer in Deutschland.",
+        "pageTitle": "Jobs für Developer in Deutschland"
+      },
+      "paginationCursors": [
+        {
+          "cursor": "AB4AAIEAAAAAAAAAAAAAAAAAAlSJyhsAAwAAAQAA",
+          "pageNumber": 1
+        },
+        {
+          "cursor": "AB4AAYH//wAAAAAAAAAAAAAAAlSJyhsAAwAAAQAA",
+          "pageNumber": 2
+        }
+      ],
+      "searchResultsMetadata": {
+        "footerVO": {
+          "countryMenu": {
+            "childNavigationLinks": [
+              {
+                "id": "13",
+                "link": "https://www.glassdoor.com.ar/Empleo/alemania-developer-empleos-SRCH_IL.0,8_IN96_KW9,18.htm",
+                "textKey": "Argentina"
+              },
+              {
+                "id": "5",
+                "link": "https://www.glassdoor.com.au/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "Australia"
+              },
+              {
+                "id": "14",
+                "link": "https://nl.glassdoor.be/Vacature/duitsland-developer-vacatures-SRCH_IL.0,9_IN96_KW10,19.htm",
+                "textKey": "België (Nederlands)"
+              },
+              {
+                "id": "15",
+                "link": "https://fr.glassdoor.be/Emploi/allemagne-developer-emplois-SRCH_IL.0,9_IN96_KW10,19.htm",
+                "textKey": "Belgique (Français)"
+              },
+              {
+                "id": "9",
+                "link": "https://www.glassdoor.com.br/Vaga/alemanha-developer-vagas-SRCH_IL.0,8_IN96_KW9,18.htm",
+                "textKey": "Brasil"
+              },
+              {
+                "id": "3",
+                "link": "https://www.glassdoor.ca/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "Canada (English)"
+              },
+              {
+                "id": "19",
+                "link": "https://fr.glassdoor.ca/Emploi/allemagne-developer-emplois-SRCH_IL.0,9_IN96_KW10,19.htm",
+                "textKey": "Canada (Français)"
+              },
+              {
+                "id": "7",
+                "link": "https://www.glassdoor.de/Job/deutschland-developer-jobs-SRCH_IL.0,11_IN96_KW12,21.htm",
+                "textKey": "Deutschland"
+              },
+              {
+                "id": "8",
+                "link": "https://www.glassdoor.es/Empleo/alemania-developer-empleos-SRCH_IL.0,8_IN96_KW9,18.htm",
+                "textKey": "España"
+              },
+              {
+                "id": "6",
+                "link": "https://www.glassdoor.fr/Emploi/allemagne-developer-emplois-SRCH_IL.0,9_IN96_KW10,19.htm",
+                "textKey": "France"
+              },
+              {
+                "id": "20",
+                "link": "https://www.glassdoor.com.hk/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "Hong Kong"
+              },
+              {
+                "id": "4",
+                "link": "https://www.glassdoor.co.in/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "India"
+              },
+              {
+                "id": "18",
+                "link": "https://www.glassdoor.ie/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "Ireland"
+              },
+              {
+                "id": "23",
+                "link": "https://www.glassdoor.it/Lavoro/germania-developer-lavori-SRCH_IL.0,8_IN96_KW9,18.htm",
+                "textKey": "Italia"
+              },
+              {
+                "id": "12",
+                "link": "https://www.glassdoor.com.mx/Empleo/alemania-developer-empleos-SRCH_IL.0,8_IN96_KW9,18.htm",
+                "textKey": "México"
+              },
+              {
+                "id": "10",
+                "link": "https://www.glassdoor.nl/Vacature/duitsland-developer-vacatures-SRCH_IL.0,9_IN96_KW10,19.htm",
+                "textKey": "Nederland"
+              },
+              {
+                "id": "21",
+                "link": "https://www.glassdoor.co.nz/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "New Zealand"
+              },
+              {
+                "id": "11",
+                "link": "https://www.glassdoor.at/Job/deutschland-developer-jobs-SRCH_IL.0,11_IN96_KW12,21.htm",
+                "textKey": "Österreich"
+              },
+              {
+                "id": "16",
+                "link": "https://de.glassdoor.ch/Job/deutschland-developer-jobs-SRCH_IL.0,11_IN96_KW12,21.htm",
+                "textKey": "Schweiz (Deutsch)"
+              },
+              {
+                "id": "22",
+                "link": "https://www.glassdoor.sg/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "Singapore"
+              },
+              {
+                "id": "17",
+                "link": "https://fr.glassdoor.ch/Emploi/allemagne-developer-emplois-SRCH_IL.0,9_IN96_KW10,19.htm",
+                "textKey": "Suisse (Français)"
+              },
+              {
+                "id": "2",
+                "link": "https://www.glassdoor.co.uk/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "United Kingdom"
+              },
+              {
+                "id": "1",
+                "link": "https://www.glassdoor.com/Job/germany-developer-jobs-SRCH_IL.0,7_IN96_KW8,17.htm",
+                "textKey": "United States"
+              }
+            ]
+          }
+        },
+        "helpCenterDomain": "https://hilfe.glassdoor.de",
+        "helpCenterLocale": "de",
+        "jobAlert": {
+          "emailFrequencyEnumId": null,
+          "jobAlertId": null
+        },
+        "jobSerpFaq": null,
+        "jobSerpJobOutlook": null,
+        "searchCriteria": {
+          "implicitLocation": {
+            "id": 2622109,
+            "localizedDisplayName": "Berlin",
+            "type": "C"
+          },
+          "keyword": "developer",
+          "location": {
+            "id": 96,
+            "localizedDisplayName": "Deutschland",
+            "localizedShortName": "Deutschland",
+            "shortName": "Germany",
+            "type": "N"
+          }
+        },
+        "showMachineReadableJobs": false
+      },
+      "serpSeoLinksVO": {
+        "relatedJobTitlesResults": [
+          "software engineer",
+          "fundraising coordinator",
+          "fundraising manager",
+          "major gifts officer",
+          "fundraising director",
+          "grants specialist",
+          "nonprofit director",
+          "grant writer",
+          "member of technical staff"
+        ],
+        "searchedJobTitle": "developer",
+        "searchedKeyword": null,
+        "searchedLocationIdAsString": "96",
+        "searchedLocationSeoName": "Germany",
+        "searchedLocationType": "N",
+        "topCityIdsToNameResults": [
+          {
+            "key": "2622109",
+            "value": "Berlin"
+          },
+          {
+            "key": "2632180",
+            "value": "Frankfurt am Main"
+          },
+          {
+            "key": "2487824",
+            "value": "Würzburg"
+          },
+          {
+            "key": "4990924",
+            "value": "Munich, Bavaria"
+          },
+          {
+            "key": "5023222",
+            "value": "Köln"
+          },
+          {
+            "key": "2610266",
+            "value": "Dresden"
+          },
+          {
+            "key": "2665906",
+            "value": "Lüneburg"
+          },
+          {
+            "key": "2507190",
+            "value": "Stuttgart"
+          },
+          {
+            "key": "2830398",
+            "value": "Erlangen"
+          },
+          {
+            "key": "2626272",
+            "value": "Mörfelden-Walldorf"
+          }
+        ],
+        "topEmployerIdsToNameResults": [
+          {
+            "key": "5162328",
+            "value": "osapiens"
+          },
+          {
+            "key": "1336608",
+            "value": "Railnova"
+          },
+          {
+            "key": "1141851",
+            "value": "Da Vinci Engineering GmbH"
+          },
+          {
+            "key": "3007587",
+            "value": "Gradle Technologies"
+          },
+          {
+            "key": "952418",
+            "value": "brandung GmbH"
+          },
+          {
+            "key": "1144673",
+            "value": "Raisin"
+          },
+          {
+            "key": "2857483",
+            "value": "Sternico GmbH"
+          },
+          {
+            "key": "2931204",
+            "value": "Wandelbots GmbH"
+          },
+          {
+            "key": "9890359",
+            "value": "Tri.Merge GmbH"
+          },
+          {
+            "key": "1342439",
+            "value": "mobisys GmbH"
+          }
+        ],
+        "topOccupationResults": [
+          "Fashion Textile Designer",
+          "Penetration Tester",
+          "2D Artist",
+          "Mainframe",
+          "International Tax Manager",
+          "Trade Finance",
+          "Textile Designer",
+          "PhD",
+          "Motion Graphics Designer",
+          "Transfer Pricing"
+        ]
+      },
+      "totalJobsCount": 79
+    }
+  }
+}
