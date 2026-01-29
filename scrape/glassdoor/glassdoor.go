@@ -216,13 +216,13 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 
 	u, err := url.Parse(baseURL + locationEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse url %s in glassdoor.fetchLocation: %v", baseURL+locationEndpoint, err)
+		return nil, fmt.Errorf("unable to parse url %s in glassdoor.fetchLocation: %w", baseURL+locationEndpoint, err)
 	}
 	u.RawQuery = params.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create http request glassdoor.fetchLocation: %v", err)
+		return nil, fmt.Errorf("unable to create http request glassdoor.fetchLocation: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "*/*")
@@ -230,14 +230,14 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to perform http request glassdoor.fetchLocation: %v", err)
+		return nil, fmt.Errorf("unable to perform http request glassdoor.fetchLocation: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var l = []location{}
 
 	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {
-		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %v", err)
+		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %w", err)
 	}
 
 	result := &l[0]
