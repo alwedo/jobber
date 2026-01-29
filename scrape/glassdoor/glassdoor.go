@@ -235,13 +235,13 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 	defer resp.Body.Close()
 
 	var l = []location{}
-
 	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {
 		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %w", err)
 	}
 
+	// Glassdoor returns a list of location matches for the search term.
+	// We pick the first one and store it in the cache.
 	result := &l[0]
-
 	actual, loaded := g.lCache.LoadOrStore(loc, result)
 	if loaded {
 		return actual.(*location), nil
