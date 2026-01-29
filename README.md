@@ -10,7 +10,7 @@ Check it out! [rssjobs.app](https://rssjobs.app/)
 
 ## Features
 
-- Fetches offers from LinkedIn and Stepstone<sup>*</sup>.
+- Fetches offers from LinkedIn, Stepstone and Glassdoor<sup>*</sup>.
 - RSS-XML and HTML feeds.
 - Hourly updated job feeds with up to 7 days of offers.
 - Automated unused job search deletion after one week of inactivity (ie. unsubscribed from the RSS feed).
