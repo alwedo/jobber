@@ -28,7 +28,7 @@ func New(l *slog.Logger) List {
 	return List{
 		stepstone.Name: stepstone.New(l),
 		linkedin.Name:  linkedin.New(l),
-		glassdoor.Name: glassdoor.New(l),
+		glassdoor.Name: glassdoor.New(),
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -85,14 +84,12 @@ type requestBody struct {
 
 type glassdoor struct {
 	client *retryhttp.Client
-	logger *slog.Logger
 	lCache sync.Map
 }
 
-func New(l *slog.Logger) *glassdoor { //nolint: revive
+func New() *glassdoor { //nolint: revive
 	return &glassdoor{
 		client: retryhttp.New(),
-		logger: l,
 		lCache: sync.Map{},
 	}
 }

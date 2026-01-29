@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"reflect"
@@ -24,7 +22,6 @@ func TestScrape(t *testing.T) {
 		mock := newGlassdoorMock(t)
 		g := &glassdoor{
 			client: retryhttp.NewWithTransport(mock),
-			logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
 			lCache: sync.Map{},
 		}
 		result, err := g.Scrape(context.Background(), &db.GetQueryScraperRow{
@@ -74,7 +71,6 @@ func TestFetchOffers(t *testing.T) {
 	mock := newGlassdoorMock(t)
 	g := &glassdoor{
 		client: retryhttp.NewWithTransport(mock),
-		logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
 		lCache: sync.Map{},
 	}
 
@@ -164,7 +160,6 @@ func TestNewRequestBody(t *testing.T) {
 	mock := newGlassdoorMock(t)
 	g := &glassdoor{
 		client: retryhttp.NewWithTransport(mock),
-		logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
 		lCache: sync.Map{},
 	}
 
@@ -239,7 +234,6 @@ func TestFetchLocation(t *testing.T) {
 			mock := newGlassdoorMock(t)
 			g := &glassdoor{
 				client: retryhttp.NewWithTransport(mock),
-				logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
 				lCache: sync.Map{},
 			}
 			if tt.gd != nil {
