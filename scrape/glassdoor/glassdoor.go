@@ -111,20 +111,18 @@ scrape:
 		}
 
 		for _, o := range resp.Data.JobListings.JobListings {
-			// Glassdoor returns only an ageInDays value for when the offer
-			// was published. We use time.Now for our timestamps and substract
-			// the amount of days from ageInDays when it's not 0.
-			t := time.Now()
-			if o.JobView.Header.AgeInDays > 0 {
-				t = t.AddDate(0, 0, -o.JobView.Header.AgeInDays)
-			}
-
 			offers = append(offers, db.CreateOfferParams{
+				// Glassdoor returns only an ageInDays value for when the offer
+				// was published. We use time.Now for our timestamps and substract
+				// the amount of days from ageInDays when it's not 0.
+				PostedAt: pgtype.Timestamptz{
+					Time:  time.Now().AddDate(0, 0, -o.JobView.Header.AgeInDays),
+					Valid: true,
+				},
 				ID:          strconv.Itoa(o.JobView.Job.ListingID),
 				Title:       o.JobView.Job.JobTitleText,
 				Company:     o.JobView.Header.EmployerNameFromSearch,
 				Location:    o.JobView.Header.LocationName,
-				PostedAt:    pgtype.Timestamptz{Time: t, Valid: true},
 				Description: strings.Join(o.JobView.Job.DescriptionFragmentsText, " "),
 				Source:      Name,
 				Url:         o.JobView.Header.SEOJobLink,
