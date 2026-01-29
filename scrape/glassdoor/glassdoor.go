@@ -158,6 +158,9 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 	if err != nil {
 		return nil, fmt.Errorf("unable to create http request in glassdoor.fetchOffers: %w", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", "PostmanRuntime/7.37.0")
 
 	resp, err := g.client.Do(req)
 	if err != nil {
@@ -226,6 +229,9 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 	if err != nil {
 		return nil, fmt.Errorf("unable to create http request glassdoor.fetchLocation: %v", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", "PostmanRuntime/7.37.0")
 
 	resp, err := g.client.Do(req)
 	if err != nil {

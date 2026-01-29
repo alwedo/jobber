@@ -100,12 +100,29 @@ func TestFetchOffers(t *testing.T) {
 	if mock.req.Method != http.MethodPost {
 		t.Errorf("wanted fetchOffers http call method to be %s, got %s", http.MethodPost, mock.req.Method)
 	}
+
 	gotURL := mock.req.URL.Scheme + "://" + mock.req.URL.Host
 	if gotURL != baseURL {
 		t.Errorf("wanted url %s, got %s", baseURL, gotURL)
 	}
+
 	if mock.req.URL.Path != searchEndpoint {
 		t.Errorf("wanted fetchOffers http call path to be %s, got %s", searchEndpoint, mock.req.URL.Path)
+	}
+
+	gotAccept := mock.req.Header.Get("Accept")
+	if gotAccept != "*/*" {
+		t.Errorf("wanted Accept header to be '*.*', got %s", gotAccept)
+	}
+
+	gotContentType := mock.req.Header.Get("Content-Type")
+	if gotContentType != "application/json" {
+		t.Errorf("wanted Content-Type header to be 'application/json', got %s", gotContentType)
+	}
+
+	gotUserAgent := mock.req.Header.Get("User-Agent")
+	if gotUserAgent != "PostmanRuntime/7.37.0" {
+		t.Errorf("wanted User-Agent header to be 'PostmanRuntime/7.37.0', got %s", gotUserAgent)
 	}
 
 	// Assert request body default values
@@ -253,6 +270,21 @@ func TestFetchLocation(t *testing.T) {
 				gotLocTypeFilters := mock.req.URL.Query().Get(paramLocationTypeFilters)
 				if paramLocationTypeFiltersValue != gotLocTypeFilters {
 					t.Errorf("wanted param locationTypeFilters to eq %s, got %s", paramLocationTypeFiltersValue, gotLocTypeFilters)
+				}
+
+				gotAccept := mock.req.Header.Get("Accept")
+				if gotAccept != "*/*" {
+					t.Errorf("wanted Accept header to be '*.*', got %s", gotAccept)
+				}
+
+				gotContentType := mock.req.Header.Get("Content-Type")
+				if gotContentType != "application/json" {
+					t.Errorf("wanted Content-Type header to be 'application/json', got %s", gotContentType)
+				}
+
+				gotUserAgent := mock.req.Header.Get("User-Agent")
+				if gotUserAgent != "PostmanRuntime/7.37.0" {
+					t.Errorf("wanted User-Agent header to be 'PostmanRuntime/7.37.0', got %s", gotUserAgent)
 				}
 			}
 
