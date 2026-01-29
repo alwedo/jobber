@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -233,7 +234,7 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 			minute = stagger
 		}
 
-		cron := fmt.Sprintf("%d * * * *", minute)
+		cron := strconv.Itoa(minute) + " * * * *"
 		stagger++
 
 		job, err := j.sched.NewJob(
