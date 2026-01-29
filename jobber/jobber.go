@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -227,7 +228,13 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	for name := range j.scrList {
 		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, name)}
 		opts = append(opts, o...)
-		cron := fmt.Sprintf("%d * * * *", q.CreatedAt.Time.Minute()+stagger)
+
+		minute := q.CreatedAt.Time.Minute() + stagger
+		if minute > 59 {
+			minute = stagger
+		}
+
+		cron := strconv.Itoa(minute) + " * * * *"
 		stagger++
 
 		job, err := j.sched.NewJob(
