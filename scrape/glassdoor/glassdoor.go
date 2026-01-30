@@ -89,7 +89,7 @@ type glassdoor struct {
 
 func New() *glassdoor { //nolint: revive
 	return &glassdoor{
-		client: retryhttp.New(),
+		client: retryhttp.New(retryhttp.WithRandomUserAgent()),
 		lCache: sync.Map{},
 	}
 }
@@ -155,7 +155,6 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "*/*")
-	req.Header.Set("User-Agent", "PostmanRuntime/7.37.0")
 
 	resp, err := g.client.Do(req)
 	if err != nil {
@@ -226,7 +225,6 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "*/*")
-	req.Header.Set("User-Agent", "PostmanRuntime/7.37.0")
 
 	resp, err := g.client.Do(req)
 	if err != nil {
