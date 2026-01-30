@@ -17,7 +17,11 @@ import (
 
 func TestScrape(t *testing.T) {
 	mockResp := newStepstoneMockResp()
-	s := &stepstone{client: retryhttp.NewWithTransport(mockResp)}
+	s := &stepstone{client: retryhttp.New(
+		retryhttp.WithRandomUserAgent(),
+		retryhttp.WithTransport(mockResp),
+	),
+	}
 
 	t.Run("http request is correctly formed", func(t *testing.T) {
 		query := &db.GetQueryScraperRow{Keywords: "golang", Location: "the moon"}
@@ -41,10 +45,8 @@ func TestScrape(t *testing.T) {
 		if gotAccept != appJSON {
 			t.Errorf("expected Accept to be %s, got %s", appJSON, gotAccept)
 		}
-		gotUserAgent := mockResp.req.Header.Get("User-Agent")
-		wantUserAgent := "CustomUserAgent/1.0"
-		if gotUserAgent != wantUserAgent {
-			t.Errorf("expected User-Agent to be %s, got %s", wantUserAgent, gotUserAgent)
+		if mockResp.req.Header.Get("User-Agent") == "" {
+			t.Error("wanted User-Agent not to be empty")
 		}
 	})
 
