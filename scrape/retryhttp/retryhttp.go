@@ -51,7 +51,7 @@ type Client struct {
 
 func New(opts ...Option) *Client {
 	c := &Client{
-		client: http.DefaultClient,
+		client: &http.Client{},
 		isRetryable: map[int]bool{
 			http.StatusRequestTimeout:      true,
 			http.StatusTooEarly:            true,
