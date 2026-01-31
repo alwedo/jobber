@@ -165,7 +165,7 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w", err)
+		return nil, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w. request body: %s", err, string(jsonBody))
 	}
 	defer resp.Body.Close()
 
