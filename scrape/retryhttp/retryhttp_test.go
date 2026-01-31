@@ -58,7 +58,7 @@ func TestDo(t *testing.T) {
 			code: http.StatusBadRequest,
 		},
 		{
-			name:      "added to etra retryable wants retries for status ",
+			name:      "added to extra retryable wants retries for status ",
 			code:      http.StatusBadRequest,
 			opt:       retryhttp.WithExtraRetryableStatus([]int{http.StatusBadRequest}),
 			wantRetry: true,
