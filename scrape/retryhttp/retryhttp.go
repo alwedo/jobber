@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	ua "github.com/lib4u/fake-useragent"
 )
 
 const maxRetries = 5 // Exponential backoff limit.
@@ -21,18 +23,39 @@ var isRetryable = map[int]bool{
 	http.StatusBadGateway:          true,
 	http.StatusServiceUnavailable:  true,
 	http.StatusGatewayTimeout:      true,
+	http.StatusForbidden:           true,
+}
+
+type Option func(*Client)
+
+// WithRandomUserAgent will add a random User-Agent header for each http call.
+func WithRandomUserAgent() Option {
+	return func(c *Client) {
+		u, err := ua.New()
+		if err != nil {
+			panic(err) // TODO: refactor to not panic
+		}
+		c.ua = u
+	}
+}
+
+func WithTransport(rt http.RoundTripper) Option {
+	return func(c *Client) {
+		c.client.Transport = rt
+	}
 }
 
 type Client struct {
 	client *http.Client
+	ua     *ua.UserAgent
 }
 
-func New() *Client {
-	return &Client{http.DefaultClient}
-}
-
-func NewWithTransport(rt http.RoundTripper) *Client {
-	return &Client{&http.Client{Transport: rt}}
+func New(opts ...Option) *Client {
+	c := &Client{client: http.DefaultClient}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
 }
 
 // Do executes the HTTP request with retry logic for retryable status codes.
@@ -60,6 +83,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		if err := req.Context().Err(); err != nil {
 			return nil, err
 		}
+
+		if c.ua != nil {
+			req.Header.Set("User-Agent", c.ua.GetRandom())
+		}
+
 		resp, err = c.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to perform http request in retryhttp.Do: %w", err)

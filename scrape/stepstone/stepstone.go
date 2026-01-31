@@ -72,7 +72,10 @@ type stepstone struct {
 }
 
 func New(log *slog.Logger) *stepstone { //nolint: revive
-	return &stepstone{client: retryhttp.New(), logger: log}
+	return &stepstone{
+		client: retryhttp.New(retryhttp.WithRandomUserAgent()),
+		logger: log,
+	}
 }
 
 func (s *stepstone) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
@@ -156,10 +159,6 @@ func (s *stepstone) fetchOffers(ctx context.Context, query *db.GetQueryScraperRo
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-
-	// Go default user agent breaks stepstone implementation.
-	// We need to pass a custom one.
-	req.Header.Set("User-Agent", "CustomUserAgent/1.0")
 
 	resp, err := s.client.Do(req)
 	if err != nil {

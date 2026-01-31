@@ -21,7 +21,10 @@ func TestScrape(t *testing.T) {
 	synctest.Test(t, func(*testing.T) {
 		mock := newGlassdoorMock(t)
 		g := &glassdoor{
-			client: retryhttp.NewWithTransport(mock),
+			client: retryhttp.New(
+				retryhttp.WithTransport(mock),
+				retryhttp.WithRandomUserAgent(),
+			),
 			lCache: sync.Map{},
 		}
 		result, err := g.Scrape(context.Background(), &db.GetQueryScraperRow{
@@ -70,7 +73,10 @@ func TestScrape(t *testing.T) {
 func TestFetchOffers(t *testing.T) {
 	mock := newGlassdoorMock(t)
 	g := &glassdoor{
-		client: retryhttp.NewWithTransport(mock),
+		client: retryhttp.New(
+			retryhttp.WithTransport(mock),
+			retryhttp.WithRandomUserAgent(),
+		),
 		lCache: sync.Map{},
 	}
 
@@ -116,9 +122,8 @@ func TestFetchOffers(t *testing.T) {
 		t.Errorf("wanted Content-Type header to be 'application/json', got %s", gotContentType)
 	}
 
-	gotUserAgent := mock.req.Header.Get("User-Agent")
-	if gotUserAgent != "PostmanRuntime/7.37.0" {
-		t.Errorf("wanted User-Agent header to be 'PostmanRuntime/7.37.0', got %s", gotUserAgent)
+	if mock.req.Header.Get("User-Agent") == "" {
+		t.Error("wanted User-Agent not to be empty")
 	}
 
 	// Assert request body default values
@@ -159,7 +164,10 @@ func TestNewRequestBody(t *testing.T) {
 	// All the other elements are indirectly tested in TestFetchOffers.
 	mock := newGlassdoorMock(t)
 	g := &glassdoor{
-		client: retryhttp.NewWithTransport(mock),
+		client: retryhttp.New(
+			retryhttp.WithTransport(mock),
+			retryhttp.WithRandomUserAgent(),
+		),
 		lCache: sync.Map{},
 	}
 
@@ -233,7 +241,10 @@ func TestFetchLocation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := newGlassdoorMock(t)
 			g := &glassdoor{
-				client: retryhttp.NewWithTransport(mock),
+				client: retryhttp.New(
+					retryhttp.WithTransport(mock),
+					retryhttp.WithRandomUserAgent(),
+				),
 				lCache: sync.Map{},
 			}
 			if tt.gd != nil {
@@ -276,9 +287,8 @@ func TestFetchLocation(t *testing.T) {
 					t.Errorf("wanted Content-Type header to be 'application/json', got %s", gotContentType)
 				}
 
-				gotUserAgent := mock.req.Header.Get("User-Agent")
-				if gotUserAgent != "PostmanRuntime/7.37.0" {
-					t.Errorf("wanted User-Agent header to be 'PostmanRuntime/7.37.0', got %s", gotUserAgent)
+				if mock.req.Header.Get("User-Agent") == "" {
+					t.Error("wanted User-Agent not to be empty")
 				}
 			}
 
