@@ -95,7 +95,6 @@ func New() *glassdoor { //nolint: revive
 			// Glassdoor cloudflare some times responds with 403 or 400.
 			retryhttp.WithExtraRetryableStatus([]int{
 				http.StatusForbidden,
-				http.StatusBadRequest,
 			}),
 		),
 		lCache: sync.Map{},
