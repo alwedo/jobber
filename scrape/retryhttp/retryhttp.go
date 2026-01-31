@@ -85,8 +85,16 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read request body for retries in retryhttp.Do: %w", err)
 		}
+
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(bodyBytes)), nil
+		}
+
 		// Reset for the first attempt
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		req.Body, err = req.GetBody()
+		if err != nil {
+			return nil, fmt.Errorf("failed to re-read request body in req.GetBody: %w", err)
+		}
 	}
 
 	for {
@@ -113,7 +121,10 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 				time.Sleep(time.Second << retries)
 				// Reset the body for the next try:
 				if len(bodyBytes) > 0 {
-					req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+					req.Body, err = req.GetBody()
+					if err != nil {
+						return nil, fmt.Errorf("failed to re-read request body in req.GetBody after a try: %w", err)
+					}
 				}
 				continue
 			}
