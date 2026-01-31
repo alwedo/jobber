@@ -97,7 +97,6 @@ func TestDo(t *testing.T) {
 					}
 				}
 			})
-
 		})
 	}
 }
