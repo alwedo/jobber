@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"testing"
@@ -20,7 +19,7 @@ import (
 
 func TestFetchOffersPage(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{retryhttp.New(retryhttp.WithTransport(mockResp)), slog.New(slog.NewJSONHandler(io.Discard, nil))}
+	l := &linkedIn{retryhttp.New(retryhttp.WithTransport(mockResp))}
 	ctx := context.Background()
 
 	t.Run("first time query", func(t *testing.T) {
@@ -182,7 +181,7 @@ func TestParseLinkedInBody(t *testing.T) {
 
 func TestScrape(t *testing.T) {
 	mockResp := newLinkedInMockResp(t)
-	l := &linkedIn{retryhttp.New(retryhttp.WithTransport(mockResp)), slog.New(slog.NewJSONHandler(io.Discard, nil))}
+	l := &linkedIn{retryhttp.New(retryhttp.WithTransport(mockResp))}
 
 	t.Run("expected behaviour", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
@@ -234,10 +233,8 @@ func TestNormalizeTime(t *testing.T) {
 				// Default bubble time is "2000-01-01 00:00:00 +0000 UTC"
 				// We add 5 hours so resting 2 hours doesn't change all the string.
 				time.Sleep(5 * time.Hour)
-				gotTime, err := normalizeTime("2000-01-01", tt.relative)
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
+				gotTime := normalizeTime("2000-01-01", tt.relative)
+
 				if gotTime.String() != tt.wantTime {
 					t.Errorf("expected time %s, got %s", tt.wantTime, gotTime.String())
 				}

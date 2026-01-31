@@ -15,18 +15,16 @@ const maxRetries = 5 // Exponential backoff limit.
 
 var ErrRetryable = errors.New("scrape: retryable error")
 
-var isRetryable = map[int]bool{
-	http.StatusRequestTimeout:      true,
-	http.StatusTooEarly:            true,
-	http.StatusTooManyRequests:     true,
-	http.StatusInternalServerError: true,
-	http.StatusBadGateway:          true,
-	http.StatusServiceUnavailable:  true,
-	http.StatusGatewayTimeout:      true,
-	http.StatusForbidden:           true,
-}
-
 type Option func(*Client)
+
+// WithExtraRetryableStatus adds custom retriable status to the pool.
+func WithExtraRetryableStatus(status []int) Option {
+	return func(c *Client) {
+		for _, v := range status {
+			c.isRetryable[v] = true
+		}
+	}
+}
 
 // WithRandomUserAgent will add a random User-Agent header for each http call.
 func WithRandomUserAgent() Option {
@@ -46,12 +44,24 @@ func WithTransport(rt http.RoundTripper) Option {
 }
 
 type Client struct {
-	client *http.Client
-	ua     *ua.UserAgent
+	client      *http.Client
+	isRetryable map[int]bool
+	ua          *ua.UserAgent
 }
 
 func New(opts ...Option) *Client {
-	c := &Client{client: http.DefaultClient}
+	c := &Client{
+		client: http.DefaultClient,
+		isRetryable: map[int]bool{
+			http.StatusRequestTimeout:      true,
+			http.StatusTooEarly:            true,
+			http.StatusTooManyRequests:     true,
+			http.StatusInternalServerError: true,
+			http.StatusBadGateway:          true,
+			http.StatusServiceUnavailable:  true,
+			http.StatusGatewayTimeout:      true,
+		},
+	}
 	for _, o := range opts {
 		o(c)
 	}
@@ -93,7 +103,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			return nil, fmt.Errorf("failed to perform http request in retryhttp.Do: %w", err)
 		}
 		if resp.StatusCode != http.StatusOK {
-			if isRetryable[resp.StatusCode] {
+			if c.isRetryable[resp.StatusCode] {
 				resp.Body.Close()
 				if retries >= maxRetries {
 					return nil, fmt.Errorf("%w after %d retries in retryhttp.Do", ErrRetryable, retries)

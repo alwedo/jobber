@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -34,11 +33,10 @@ const (
 
 type linkedIn struct {
 	client *retryhttp.Client
-	logger *slog.Logger
 }
 
-func New(l *slog.Logger) *linkedIn { //nolint: revive
-	return &linkedIn{client: retryhttp.New(), logger: l}
+func New() *linkedIn { //nolint: revive
+	return &linkedIn{client: retryhttp.New()}
 }
 
 // search runs a linkedin search based on a query.
@@ -61,7 +59,8 @@ func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]
 			}
 			offers, err = l.parseLinkedInBody(resp)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parseLinkedInBody body linkedIn.Scrape: %v", err)
+				// If parseLinkedInBody fails we return the accumulated offers so far.
+				return totalOffers, fmt.Errorf("failed to parseLinkedInBody body linkedIn.Scrape: %v", err)
 			}
 			totalOffers = append(totalOffers, offers...)
 		}
@@ -155,11 +154,10 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 			// Extract Posted Date
 			timeSel := s.Find("time")
 			postedAt, _ := timeSel.Attr("datetime")
-			t, err := normalizeTime(postedAt, normalizeText(timeSel.Text()))
-			if err != nil {
-				l.logger.Error("unable to normalize time in scrape.LinkedIn", slog.Any("error", err))
+			job.PostedAt = pgtype.Timestamptz{
+				Time:  normalizeTime(postedAt, normalizeText(timeSel.Text())),
+				Valid: true,
 			}
-			job.PostedAt = pgtype.Timestamptz{Time: t, Valid: true}
 
 			jobs = append(jobs, job)
 		}
@@ -193,8 +191,8 @@ func normalizeText(s string) string {
 // Otherwise will add the current hour, min and secs to the parsed time
 // to avoid having every old offer look like it was posted at midnight.
 //
-// Upon errors normalizeTime will return time.Now() and the error.
-func normalizeTime(postedAt, rel string) (time.Time, error) {
+// Upon errors normalizeTime will return time.Now().
+func normalizeTime(postedAt, rel string) time.Time {
 	var parsedTime time.Time
 	var now = time.Now()
 
@@ -202,13 +200,13 @@ func normalizeTime(postedAt, rel string) (time.Time, error) {
 		// Split "2 hours ago" to find the number of hours.
 		v, err := strconv.Atoi(strings.Split(rel, " ")[0])
 		if err != nil {
-			return now, fmt.Errorf("unable to parse relative time in normalizeTime: %w", err)
+			return now
 		}
 		parsedTime = now.Add(-time.Duration(v) * time.Hour)
 	} else {
 		t, err := time.ParseInLocation("2006-01-02", postedAt, time.Local)
 		if err != nil {
-			return now, fmt.Errorf("unable to parse date in normalizeTime: %w", err)
+			return now
 		}
 		parsedTime = time.Date(
 			t.Year(), t.Month(), t.Day(),
@@ -217,5 +215,5 @@ func normalizeTime(postedAt, rel string) (time.Time, error) {
 		)
 	}
 
-	return parsedTime.UTC(), nil
+	return parsedTime.UTC()
 }

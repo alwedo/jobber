@@ -89,7 +89,15 @@ type glassdoor struct {
 
 func New() *glassdoor { //nolint: revive
 	return &glassdoor{
-		client: retryhttp.New(retryhttp.WithRandomUserAgent()),
+		client: retryhttp.New(
+			retryhttp.WithRandomUserAgent(),
+
+			// Glassdoor cloudflare some times responds with 403 or 400.
+			retryhttp.WithExtraRetryableStatus([]int{
+				http.StatusForbidden,
+				http.StatusBadRequest,
+			}),
+		),
 		lCache: sync.Map{},
 	}
 }
