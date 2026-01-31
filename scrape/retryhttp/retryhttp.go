@@ -106,7 +106,8 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			if c.isRetryable[resp.StatusCode] {
 				resp.Body.Close()
 				if retries >= maxRetries {
-					return nil, fmt.Errorf("%w after %d retries in retryhttp.Do", ErrRetryable, retries)
+					return nil, fmt.Errorf("%w after %d retries in retryhttp.Do. status code: %d, request body: %s",
+						ErrRetryable, retries, resp.StatusCode, string(bodyBytes))
 				}
 				retries++
 				time.Sleep(time.Second << retries)
