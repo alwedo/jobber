@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -68,13 +67,11 @@ type item struct {
 
 type stepstone struct {
 	client *retryhttp.Client
-	logger *slog.Logger
 }
 
-func New(log *slog.Logger) *stepstone { //nolint: revive
+func New() *stepstone { //nolint: revive
 	return &stepstone{
 		client: retryhttp.New(retryhttp.WithRandomUserAgent()),
-		logger: log,
 	}
 }
 

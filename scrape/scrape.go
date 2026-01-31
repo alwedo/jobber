@@ -26,7 +26,7 @@ type List map[string]Scraper
 // New returns a list of all available scrapers.
 func New(l *slog.Logger) List {
 	return List{
-		stepstone.Name: stepstone.New(l),
+		stepstone.Name: stepstone.New(),
 		linkedin.Name:  linkedin.New(l),
 		glassdoor.Name: glassdoor.New(),
 	}
