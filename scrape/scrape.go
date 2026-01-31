@@ -6,7 +6,6 @@ package scrape
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/alwedo/jobber/db"
@@ -24,10 +23,10 @@ type Scraper interface {
 type List map[string]Scraper
 
 // New returns a list of all available scrapers.
-func New(l *slog.Logger) List {
+func New() List {
 	return List{
 		stepstone.Name: stepstone.New(),
-		linkedin.Name:  linkedin.New(l),
+		linkedin.Name:  linkedin.New(),
 		glassdoor.Name: glassdoor.New(),
 	}
 }

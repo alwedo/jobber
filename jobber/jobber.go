@@ -57,7 +57,7 @@ func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	j := &Jobber{
 		ctx:     ctx,
-		scrList: scrape.New(log),
+		scrList: scrape.New(),
 		logger:  log,
 		db:      db,
 		sched:   sched,
