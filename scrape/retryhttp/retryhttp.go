@@ -80,7 +80,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 
 	// Buffer the body for retries.
 	if req.Body != nil {
-		bodyBytes, err := io.ReadAll(req.Body)
+		bodyBytes, err = io.ReadAll(req.Body)
 		req.Body.Close()
 		if err != nil {
 			return nil, fmt.Errorf("failed to read request body for retries in retryhttp.Do: %w", err)
