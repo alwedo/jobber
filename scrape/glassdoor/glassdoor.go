@@ -92,7 +92,8 @@ func New() *glassdoor { //nolint: revive
 		client: retryhttp.New(
 			retryhttp.WithRandomUserAgent(),
 
-			// Glassdoor cloudflare some times responds with 403 or 400.
+			// Glassdoor cloudflare some times responds
+			// with 403 and can work after retrying.
 			retryhttp.WithExtraRetryableStatus([]int{
 				http.StatusForbidden,
 			}),
@@ -165,7 +166,7 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 
 	resp, err := g.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w. request body: %s", err, string(jsonBody))
+		return nil, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w", err)
 	}
 	defer resp.Body.Close()
 
