@@ -133,7 +133,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			if readErr != nil {
 				return nil, fmt.Errorf("unable to read response body after error in retryhttp.Do: %w", readErr)
 			}
-			return nil, fmt.Errorf("retryhttp.Do received status code: %d, url: %s, message: %s, reqbody: %s", resp.StatusCode, req.URL.String(), string(body), string(bodyBytes))
+			return nil, fmt.Errorf("retryhttp.Do received status code: %d, url: %s, message: %s", resp.StatusCode, req.URL.String(), string(body))
 		}
 		break
 	}
