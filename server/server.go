@@ -213,11 +213,13 @@ func (s *server) static() http.HandlerFunc {
 		var a string
 		var ct string
 
-		switch r.PathValue(pathParamStatic) {
-		case "style.css":
+		path := r.PathValue(pathParamStatic)
+
+		switch {
+		case strings.HasPrefix(path, "style.") && strings.HasSuffix(path, ".css"):
 			a = assetStyle
 			ct = "text/css"
-		case "script.js":
+		case strings.HasPrefix(path, "script.") && strings.HasSuffix(path, ".js"):
 			a = assetScript
 			ct = "application/javascript"
 		default:
