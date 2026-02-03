@@ -2,9 +2,10 @@ package retryhttp_test
 
 import (
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"testing/synctest"
 
@@ -69,14 +70,15 @@ func TestDo(t *testing.T) {
 		t.Run(tt.name+http.StatusText(tt.code), func(t *testing.T) {
 			synctest.Test(t, func(*testing.T) {
 				{
-					mock := &mock{}
+					mock := &mock{t: t}
 					opts := []retryhttp.Option{retryhttp.WithTransport(mock)}
 					if tt.opt != nil {
 						opts = append(opts, tt.opt)
 					}
 					rh := retryhttp.New(opts...)
 
-					req, err := http.NewRequest(http.MethodGet, strconv.Itoa(tt.code), nil)
+					wantBody := "cuak"
+					req, err := http.NewRequest(http.MethodGet, strconv.Itoa(tt.code), strings.NewReader(wantBody))
 					if err != nil {
 						t.Fatalf("unable to create http request: %v", err)
 					}
@@ -88,6 +90,18 @@ func TestDo(t *testing.T) {
 
 					synctest.Wait()
 
+					// We check the body is always sent on each retry.
+					if mock.calls != len(mock.bodies) {
+						t.Errorf("wanted len mock calls to be the same as len of mock bodies. mockCalls: %d, mockBodies: %d", mock.calls, len(mock.bodies))
+					}
+
+					for _, gotBody := range mock.bodies {
+						if wantBody != string(gotBody) {
+							t.Errorf("wanted body %s, got %s", wantBody, string(gotBody))
+						}
+					}
+
+					// Assert the retries.
 					if tt.wantRetry && mock.calls < 2 {
 						t.Errorf("wanted mock calls to be more than 1, got: %d", mock.calls)
 					}
@@ -103,15 +117,25 @@ func TestDo(t *testing.T) {
 
 // mock converts the url to the status code wanted to be returned.
 type mock struct {
-	calls int
+	t      testing.TB
+	calls  int
+	bodies [][]byte
 }
 
 func (m *mock) RoundTrip(r *http.Request) (*http.Response, error) {
 	m.calls++
 
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		m.t.Fatalf("unable to read mock body: %v", err)
+	}
+	defer r.Body.Close()
+
+	m.bodies = append(m.bodies, b)
+
 	sc, err := strconv.Atoi(r.URL.String())
 	if err != nil {
-		return nil, fmt.Errorf("unable to convert url.String() to i in mock: %w", err)
+		m.t.Fatalf("unable to convert url.String() to i in mock: %v", err)
 	}
 
 	return &http.Response{StatusCode: sc}, nil
