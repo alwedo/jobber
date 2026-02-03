@@ -216,10 +216,10 @@ func (s *server) static() http.HandlerFunc {
 		path := r.PathValue(pathParamStatic)
 
 		switch {
-		case strings.HasPrefix(path, "style.") && strings.HasSuffix(path, ".css"):
+		case regexp.MustCompile(`^style\.v[\d.]+\.css$`).MatchString(path):
 			a = assetStyle
 			ct = "text/css"
-		case strings.HasPrefix(path, "script.") && strings.HasSuffix(path, ".js"):
+		case regexp.MustCompile(`^script\.v[\d.]+\.js$`).MatchString(path):
 			a = assetScript
 			ct = "application/javascript"
 		default:
