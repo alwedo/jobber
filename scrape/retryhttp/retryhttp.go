@@ -1,3 +1,11 @@
+// Package retryhttp provides an HTTP client wrapper with automatic retries,
+// exponential backoff, and optional request mutation.
+//
+// The client retries requests when the response status code is classified as
+// retryable. A default set of retryable HTTP status codes is provided and can
+// be extended via options.
+//
+// If retries are exhausted the client will respond with ErrRetrayble.
 package retryhttp
 
 import (
@@ -13,7 +21,7 @@ import (
 
 const maxRetries = 5 // Exponential backoff limit.
 
-var ErrRetryable = errors.New("scrape: retryable error")
+var ErrRetryable = errors.New("too many retries")
 
 type Option func(*Client)
 
@@ -37,6 +45,8 @@ func WithRandomUserAgent() Option {
 	}
 }
 
+// WithTransport overwrites the http client
+// with a custom RoundTripper for testing.
 func WithTransport(rt http.RoundTripper) Option {
 	return func(c *Client) {
 		c.client.Transport = rt
@@ -51,7 +61,7 @@ type Client struct {
 
 func New(opts ...Option) *Client {
 	c := &Client{
-		client: http.DefaultClient,
+		client: &http.Client{},
 		isRetryable: map[int]bool{
 			http.StatusRequestTimeout:      true,
 			http.StatusTooEarly:            true,
@@ -71,13 +81,6 @@ func New(opts ...Option) *Client {
 // Do executes the HTTP request with retry logic for retryable status codes.
 // This implementation buffers and resets the body for each retry if req.Body is non-nil.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	var (
-		bodyBytes []byte
-		retries   int
-		resp      *http.Response
-		err       error
-	)
-
 	// Buffer the body for retries.
 	if req.Body != nil {
 		bodyBytes, err := io.ReadAll(req.Body)
@@ -85,46 +88,53 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read request body for retries in retryhttp.Do: %w", err)
 		}
-		// Reset for the first attempt
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-	}
 
-	for {
-		if err := req.Context().Err(); err != nil {
-			return nil, err
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(bodyBytes)), nil
 		}
 
+		// Reset for the first attempt
+		req.Body, err = req.GetBody()
+		if err != nil {
+			return nil, fmt.Errorf("failed to re-read request body in req.GetBody: %w", err)
+		}
+	}
+
+	var retries int
+	for {
 		if c.ua != nil {
 			req.Header.Set("User-Agent", c.ua.GetRandom())
 		}
 
-		resp, err = c.client.Do(req)
+		resp, err := c.client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to perform http request in retryhttp.Do: %w", err)
 		}
-		if resp.StatusCode != http.StatusOK {
-			if c.isRetryable[resp.StatusCode] {
-				resp.Body.Close()
-				if retries >= maxRetries {
-					return nil, fmt.Errorf("%w after %d retries in retryhttp.Do", ErrRetryable, retries)
-				}
-				retries++
-				time.Sleep(time.Second << retries)
-				// Reset the body for the next try:
-				if len(bodyBytes) > 0 {
-					req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+		if c.isRetryable[resp.StatusCode] {
+			if retries >= maxRetries {
+				return resp, fmt.Errorf("%w with status code %d", ErrRetryable, resp.StatusCode)
+			}
+			resp.Body.Close()
+			retries++
+
+			// While waiting for the next try we also listen for ctx cancellation.
+			t := time.NewTimer(time.Second << retries)
+			select {
+			case <-t.C:
+				// Reset the body and retry after the delay.
+				if req.Body != nil {
+					req.Body, err = req.GetBody()
+					if err != nil {
+						return nil, fmt.Errorf("failed to re-read request body in req.GetBody after a try: %w", err)
+					}
 				}
 				continue
+			case <-req.Context().Done():
+				return nil, fmt.Errorf("retryhttp.Do ctx cancelled: %w", req.Context().Err())
 			}
-			body, readErr := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			if readErr != nil {
-				return nil, fmt.Errorf("unable to read response body after error in retryhttp.Do: %w", readErr)
-			}
-			return nil, fmt.Errorf("retryhttp.Do received status code: %d, url: %s, message: %s", resp.StatusCode, req.URL.String(), string(body))
 		}
-		break
-	}
 
-	return resp, nil
+		return resp, nil
+	}
 }

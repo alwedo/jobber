@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -92,10 +93,10 @@ func New() *glassdoor { //nolint: revive
 		client: retryhttp.New(
 			retryhttp.WithRandomUserAgent(),
 
-			// Glassdoor cloudflare some times responds with 403 or 400.
+			// Glassdoor cloudflare some times responds
+			// with 403 and can work after retrying.
 			retryhttp.WithExtraRetryableStatus([]int{
 				http.StatusForbidden,
-				http.StatusBadRequest,
 			}),
 		),
 		lCache: sync.Map{},
@@ -169,6 +170,13 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 		return nil, fmt.Errorf("unable to perform http request in glassdor.fetchOffers: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading the response body: %w", err)
+		}
+		return nil, fmt.Errorf("response code %d, body: %s", resp.StatusCode, string(body))
+	}
 
 	var r = &response{}
 	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
@@ -239,6 +247,13 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 		return nil, fmt.Errorf("unable to perform http request glassdoor.fetchLocation: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading the response body: %w", err)
+		}
+		return nil, fmt.Errorf("response code %d, body: %s", resp.StatusCode, string(body))
+	}
 
 	var l = []location{}
 	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {

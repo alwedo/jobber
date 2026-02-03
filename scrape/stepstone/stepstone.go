@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -162,6 +163,13 @@ func (s *stepstone) fetchOffers(ctx context.Context, query *db.GetQueryScraperRo
 		return nil, fmt.Errorf("failed to do http request in stepstone.fetchOffers: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading the response body: %w", err)
+		}
+		return nil, fmt.Errorf("response code %d, body: %s", resp.StatusCode, string(body))
+	}
 
 	r := &response{}
 	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {

@@ -60,7 +60,7 @@ func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]
 			offers, err = l.parseLinkedInBody(resp)
 			if err != nil {
 				// If parseLinkedInBody fails we return the accumulated offers so far.
-				return totalOffers, fmt.Errorf("failed to parseLinkedInBody body linkedIn.Scrape: %v", err)
+				return totalOffers, fmt.Errorf("failed to parseLinkedInBody body linkedIn.Scrape: %w", err)
 			}
 			totalOffers = append(totalOffers, offers...)
 		}
@@ -113,6 +113,15 @@ func (l *linkedIn) fetchOffersPage(ctx context.Context, query *db.GetQueryScrape
 	resp, err := l.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to do http request in linkedin.fetchOffersPage: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading the response body: %w", err)
+		}
+		return nil, fmt.Errorf("response code %d, body: %s", resp.StatusCode, string(body))
 	}
 
 	return resp.Body, nil
