@@ -43,6 +43,8 @@ const (
 
 //go:embed assets/*
 var assets embed.FS
+var isMainStyle = regexp.MustCompile(`^style\.v[\d.]+\.css$`)
+var isMainScript = regexp.MustCompile(`^script\.v[\d.]+\.js$`)
 
 type server struct {
 	logger    *slog.Logger
@@ -216,10 +218,10 @@ func (s *server) static() http.HandlerFunc {
 		path := r.PathValue(pathParamStatic)
 
 		switch {
-		case regexp.MustCompile(`^style\.v[\d.]+\.css$`).MatchString(path):
+		case isMainStyle.MatchString(path):
 			a = assetStyle
 			ct = "text/css"
-		case regexp.MustCompile(`^script\.v[\d.]+\.js$`).MatchString(path):
+		case isMainScript.MatchString(path):
 			a = assetScript
 			ct = "application/javascript"
 		default:
