@@ -75,7 +75,7 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "berlin",
 			},
 			wantStatus:     http.StatusBadRequest,
-			wantBodyString: "invalid params: [keywords], only [A-Za-z0-9] allowed",
+			wantBodyString: "invalid params: [keywords], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
 		},
 		{
 			name:   "with incorrect param location",
@@ -86,7 +86,18 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "berlin&",
 			},
 			wantStatus:     http.StatusBadRequest,
-			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed",
+			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
+		},
+		{
+			name:   "with param location as numbers",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: "golang",
+				queryParamLocation: "123",
+			},
+			wantStatus:     http.StatusBadRequest,
+			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
 		},
 		{
 			name:   "with missing param location",
@@ -106,7 +117,7 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "the-moon",
 			},
 			wantStatus:     http.StatusBadRequest,
-			wantBodyString: "missing params: [keywords], invalid params: [location], only [A-Za-z0-9] allowed",
+			wantBodyString: "missing params: [keywords], invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
 		},
 		{
 			name:   "valid XML feed",

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -195,7 +197,10 @@ func TestNewRequestBody(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			synctest.Test(t, func(*testing.T) {
-				query := &db.GetQueryScraperRow{}
+				query := &db.GetQueryScraperRow{
+					Keywords: "cuak",
+					Location: "squeek",
+				}
 				if tt.qt != 0 {
 					query.ScrapedAt = pgtype.Timestamptz{
 						Time:  time.Now().Add(-tt.qt),
@@ -219,15 +224,18 @@ func TestNewRequestBody(t *testing.T) {
 func TestFetchLocation(t *testing.T) {
 	tests := []struct {
 		name         string
+		location     string
 		gd           func(*glassdoor)
 		wantHTTPCall bool
 	}{
 		{
 			name:         "it calls glassdoor with correct params, returns and caches location type and id",
+			location:     "berlin",
 			wantHTTPCall: true,
 		},
 		{
-			name: "it doesn't call glassdoor if location is cached",
+			name:     "it doesn't call glassdoor if location is cached",
+			location: "berlin",
 			gd: func(g *glassdoor) {
 				g.lCache.Store("berlin", &location{
 					LocationID:   2622109,
@@ -251,8 +259,7 @@ func TestFetchLocation(t *testing.T) {
 				tt.gd(g)
 			}
 
-			loc := "berlin"
-			resp, err := g.fetchLocation(context.Background(), loc)
+			resp, err := g.fetchLocation(context.Background(), tt.location)
 			if err != nil {
 				t.Fatalf("failed in fetchLocationId: %v", err)
 			}
@@ -268,8 +275,8 @@ func TestFetchLocation(t *testing.T) {
 				}
 
 				gotTerm := mock.req.URL.Query().Get(paramTerm)
-				if loc != gotTerm {
-					t.Errorf("wanted param Term to eq %s, got %s", loc, gotTerm)
+				if tt.location != gotTerm {
+					t.Errorf("wanted param Term to eq %s, got %s", tt.location, gotTerm)
 				}
 
 				gotLocTypeFilters := mock.req.URL.Query().Get(paramLocationTypeFilters)
@@ -306,7 +313,7 @@ func TestFetchLocation(t *testing.T) {
 			}
 
 			// Assess the location was cached.
-			v, _ := g.lCache.Load(loc)
+			v, _ := g.lCache.Load(tt.location)
 			cLoc := v.(*location)
 			if wantLocID != cLoc.LocationID {
 				t.Errorf("wanted cached locationId to be %d, got %d", wantLocID, cLoc.LocationID)
@@ -316,6 +323,25 @@ func TestFetchLocation(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("location 200 with empty array", func(t *testing.T) {
+		mock := newGlassdoorMock(t)
+		g := &glassdoor{
+			client: retryhttp.New(
+				retryhttp.WithTransport(mock),
+				retryhttp.WithRandomUserAgent(),
+			),
+			lCache: sync.Map{},
+		}
+
+		_, err := g.fetchLocation(context.Background(), "")
+		if err == nil {
+			t.Error("wanted err, got nil")
+		}
+		if err.Error() != "location not found" {
+			t.Errorf("wanted err to be 'location not found', got %s", err.Error())
+		}
+	})
 }
 
 type glassdoorMock struct {
@@ -342,7 +368,12 @@ func (g *glassdoorMock) RoundTrip(req *http.Request) (*http.Response, error) {
 	var fn string
 	switch req.URL.Path {
 	case locationEndpoint:
-		fn = "test_data/location.json"
+		if req.URL.Query().Get(paramTerm) == "" {
+			fmt.Println(req.Form.Get(paramTerm))
+			resp.Body = io.NopCloser(strings.NewReader("[]"))
+		} else {
+			fn = "test_data/location.json"
+		}
 	case searchEndpoint:
 		defer req.Body.Close()
 
@@ -354,12 +385,14 @@ func (g *glassdoorMock) RoundTrip(req *http.Request) (*http.Response, error) {
 		fn = fmt.Sprintf("test_data/glassdoor%d.json", g.reqBody.PageNumber)
 	}
 
-	body, err := os.Open(fn)
-	if err != nil {
-		g.t.Fatalf("failed to open %s in mockResp.RoundTrip: %s", fn, err)
-		return resp, err
+	if fn != "" {
+		body, err := os.Open(fn)
+		if err != nil {
+			g.t.Fatalf("failed to open %s in mockResp.RoundTrip: %s", fn, err)
+			return resp, err
+		}
+		resp.Body = body
 	}
-	resp.Body = body
 
 	return resp, nil
 }

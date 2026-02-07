@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -262,6 +263,10 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 
 	// Glassdoor returns a list of location matches for the search term.
 	// We pick the first one and store it in the cache.
+	// If there are no locations we log an error for further analysis.
+	if len(l) == 0 {
+		return nil, errors.New("location not found")
+	}
 	result := &l[0]
 	actual, loaded := g.lCache.LoadOrStore(loc, result)
 	if loaded {
