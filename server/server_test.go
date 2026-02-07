@@ -226,7 +226,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			name:       "static endpoint style.css",
-			path:       "/static/style.css",
+			path:       "/static/style.v.1.0.0.css",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
 			wantHeaders: map[string]string{
@@ -241,7 +241,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			name:       "static endpoint script.js",
-			path:       "/static/script.js",
+			path:       "/static/script.v.1.0.0.js",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
 			wantHeaders: map[string]string{
