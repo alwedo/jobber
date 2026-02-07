@@ -275,7 +275,7 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 			errStr = append(errStr, fmt.Sprintf("missing params: %v", missing))
 		}
 		if len(invalid) != 0 {
-			errStr = append(errStr, fmt.Sprintf("invalid params: %v, only [A-Za-z0-9] allowed", invalid))
+			errStr = append(errStr, fmt.Sprintf("invalid params: %v, only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location", invalid))
 		}
 		_, err := fmt.Fprint(w, strings.Join(errStr, ", "))
 		if err != nil {
