@@ -86,7 +86,7 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "berlin&",
 			},
 			wantStatus:     http.StatusBadRequest,
-			wantBodyString: "invalid params: %v, only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
+			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
 		},
 		{
 			name:   "with param location as numbers",
@@ -97,7 +97,7 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "berlin&",
 			},
 			wantStatus:     http.StatusBadRequest,
-			wantBodyString: "invalid params: %v, only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
+			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
 		},
 		{
 			name:   "with missing param location",

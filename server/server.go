@@ -43,8 +43,14 @@ const (
 
 //go:embed assets/*
 var assets embed.FS
+
+// Static files validation regex.
 var isMainStyle = regexp.MustCompile(`^style\.v[\d.]+\.css$`)
 var isMainScript = regexp.MustCompile(`^script\.v[\d.]+\.js$`)
+
+// Input validation regex.
+var isValidKeywords = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
+var isValidLocation = regexp.MustCompile(`^[A-Za-z ]+$`)
 
 type server struct {
 	logger    *slog.Logger
@@ -252,9 +258,6 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
 }
 
-// Input validation regex.
-var re = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
-
 // validateParams receives a list of params, validate they've been supplied in the request and normalizes them.
 // If a param is missing or contains invalid characters, it will respond with 400.
 func validateParams(params []string, w http.ResponseWriter, r *http.Request) (url.Values, error) {
@@ -266,7 +269,8 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 		switch {
 		case v == "":
 			missing = append(missing, p)
-		case !re.MatchString(v):
+		case p == queryParamKeywords && !isValidKeywords.MatchString(v) ||
+			p == queryParamLocation && !isValidLocation.MatchString(v):
 			invalid = append(invalid, p)
 		default:
 			valid.Add(p, strings.ToLower(strings.TrimSpace(v)))
