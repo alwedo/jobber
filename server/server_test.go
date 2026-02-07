@@ -94,7 +94,7 @@ func TestServer(t *testing.T) {
 			method: http.MethodPost,
 			params: map[string]string{
 				queryParamKeywords: "golang",
-				queryParamLocation: "berlin&",
+				queryParamLocation: "123",
 			},
 			wantStatus:     http.StatusBadRequest,
 			wantBodyString: "invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
