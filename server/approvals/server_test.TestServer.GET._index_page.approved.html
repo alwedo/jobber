@@ -37,9 +37,9 @@
                     type="text"
                     name="location"
                     placeholder="location, ie. berlin"
-                    pattern="[A-Za-z0-9 ]+"
+                    pattern="[A-Za-z ]+"
                     required
-                    oninput="this.setCustomValidity(this.validity.patternMismatch ? 'only letters and numbers are allowed' : '')" />
+                    oninput="this.setCustomValidity(this.validity.patternMismatch ? 'only letters are allowed' : '')" />
                 <button type="submit">create RSS feed</button>
             </form>
         </div>
