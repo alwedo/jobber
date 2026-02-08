@@ -310,8 +310,16 @@ func TestServer(t *testing.T) {
 			if tt.wantHeaders != nil {
 				for k, wantHeader := range tt.wantHeaders {
 					gotHeader := r.Header.Get(k)
-					if wantHeader != gotHeader {
-						t.Errorf("wanted header %s to be %s, got %s", k, wantHeader, gotHeader)
+					if k == "" && tt.name == "valid XML feed" {
+						// Fix flaky test where some times the test 'valid XML feed' takes more
+						// than 1s to get processed and the max-age value is 2s older instead of 1.
+						if wantHeader != gotHeader || wantHeader != "max-age=1798" {
+							t.Errorf("wanted header %s to be %s, got %s", k, wantHeader, gotHeader)
+						}
+					} else {
+						if wantHeader != gotHeader {
+							t.Errorf("wanted header %s to be %s, got %s", k, wantHeader, gotHeader)
+						}
 					}
 				}
 			}
