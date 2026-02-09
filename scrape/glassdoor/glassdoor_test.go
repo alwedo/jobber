@@ -3,6 +3,7 @@ package glassdoor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,7 +21,60 @@ import (
 )
 
 func TestScrape(t *testing.T) {
-	synctest.Test(t, func(*testing.T) {
+	t.Run("paginated response", func(t *testing.T) {
+		synctest.Test(t, func(*testing.T) {
+			mock := newGlassdoorMock(t)
+			g := &glassdoor{
+				client: retryhttp.New(
+					retryhttp.WithTransport(mock),
+					retryhttp.WithRandomUserAgent(),
+				),
+				lCache: sync.Map{},
+			}
+			result, err := g.Scrape(context.Background(), &db.GetQueryScraperRow{
+				Keywords: "developer",
+				Location: "germany",
+			})
+			if err != nil {
+				t.Errorf("scraper failed: %v", err)
+			}
+
+			if len(result) != 83 {
+				t.Fatalf("wanted 83 offers, got %d", len(result))
+			}
+
+			wantFirstResult := db.CreateOfferParams{
+				ID:          "1010007206002",
+				Title:       "Lead Backend Engineer | PHP Symfony",
+				Company:     "Dyflexis",
+				Location:    "Köln",
+				PostedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
+				Description: "Earn up to €7,000 per month based on experience and work hybrid (2 days per week at our offices in Den Haag or Cologne). 25 vacation days + your birthday off.",
+				Source:      "Glassdoor",
+				Url:         "https://www.glassdoor.de/job-listing/lead-backend-engineer-php-symfony-dyflexis-JV_IC5023222_KO0,33_KE34,42.htm?jl=1010007206002",
+			}
+			if !reflect.DeepEqual(wantFirstResult, result[0]) {
+				t.Errorf("wanted first jobListing to be:\n%v\ngot:\n%v\n", wantFirstResult, result[0])
+			}
+
+			wantLastResult := db.CreateOfferParams{
+				ID:       "1010007519935",
+				Title:    "Senior Cloud Solution Developer (m/w/d)",
+				Company:  "Sopra Steria",
+				Location: "Deutschland",
+				// The last job offer as an `ageInDays` of 1, so  we expect the PostedAt date to be now - 1 day.
+				PostedAt:    pgtype.Timestamptz{Time: time.Now().AddDate(0, 0, -1), Valid: true},
+				Description: "Wir sind als eine der führenden europäischen Management- und Technologieberatungen ein echter Tech-Player. Wir sehen uns als Vordenker*innen, handeln und denken…",
+				Source:      "Glassdoor",
+				Url:         "https://www.glassdoor.de/job-listing/senior-cloud-solution-developer-mwd-sopra-steria-JV_KO0,35_KE36,48.htm?jl=1010007519935",
+			}
+			if !reflect.DeepEqual(wantLastResult, result[len(result)-1]) {
+				t.Errorf("wanted last jobListing to be:\n%v\ngot:\n%v\n", wantLastResult, result[len(result)-1])
+			}
+		})
+	})
+
+	t.Run("invalid location response", func(t *testing.T) {
 		mock := newGlassdoorMock(t)
 		g := &glassdoor{
 			client: retryhttp.New(
@@ -31,43 +85,13 @@ func TestScrape(t *testing.T) {
 		}
 		result, err := g.Scrape(context.Background(), &db.GetQueryScraperRow{
 			Keywords: "developer",
-			Location: "germany",
+			Location: "invalid",
 		})
 		if err != nil {
-			t.Errorf("scraper failed: %v", err)
+			t.Errorf("expected err to be nil, got: %v", err)
 		}
-
-		if len(result) != 83 {
-			t.Fatalf("wanted 83 offers, got %d", len(result))
-		}
-
-		wantFirstResult := db.CreateOfferParams{
-			ID:          "1010007206002",
-			Title:       "Lead Backend Engineer | PHP Symfony",
-			Company:     "Dyflexis",
-			Location:    "Köln",
-			PostedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
-			Description: "Earn up to €7,000 per month based on experience and work hybrid (2 days per week at our offices in Den Haag or Cologne). 25 vacation days + your birthday off.",
-			Source:      "Glassdoor",
-			Url:         "https://www.glassdoor.de/job-listing/lead-backend-engineer-php-symfony-dyflexis-JV_IC5023222_KO0,33_KE34,42.htm?jl=1010007206002",
-		}
-		if !reflect.DeepEqual(wantFirstResult, result[0]) {
-			t.Errorf("wanted first jobListing to be:\n%v\ngot:\n%v\n", wantFirstResult, result[0])
-		}
-
-		wantLastResult := db.CreateOfferParams{
-			ID:       "1010007519935",
-			Title:    "Senior Cloud Solution Developer (m/w/d)",
-			Company:  "Sopra Steria",
-			Location: "Deutschland",
-			// The last job offer as an `ageInDays` of 1, so  we expect the PostedAt date to be now - 1 day.
-			PostedAt:    pgtype.Timestamptz{Time: time.Now().AddDate(0, 0, -1), Valid: true},
-			Description: "Wir sind als eine der führenden europäischen Management- und Technologieberatungen ein echter Tech-Player. Wir sehen uns als Vordenker*innen, handeln und denken…",
-			Source:      "Glassdoor",
-			Url:         "https://www.glassdoor.de/job-listing/senior-cloud-solution-developer-mwd-sopra-steria-JV_KO0,35_KE36,48.htm?jl=1010007519935",
-		}
-		if !reflect.DeepEqual(wantLastResult, result[len(result)-1]) {
-			t.Errorf("wanted last jobListing to be:\n%v\ngot:\n%v\n", wantLastResult, result[len(result)-1])
+		if result != nil {
+			t.Errorf("expected result to be nil, got: %v", result)
 		}
 	})
 }
@@ -227,6 +251,7 @@ func TestFetchLocation(t *testing.T) {
 		location     string
 		gd           func(*glassdoor)
 		wantHTTPCall bool
+		wantErr      error
 	}{
 		{
 			name:         "it calls glassdoor with correct params, returns and caches location type and id",
@@ -242,6 +267,22 @@ func TestFetchLocation(t *testing.T) {
 					LocationType: "C",
 				})
 			},
+		},
+		{
+			name:         "with invalid location returns err",
+			location:     "invalid",
+			wantHTTPCall: true,
+			wantErr:      ErrInvalidLocation,
+		},
+		{
+			name:     "with invalid location cached",
+			location: "invalid",
+			gd: func(g *glassdoor) {
+				g.lCache.Store("invalid", &location{
+					invalid: true,
+				})
+			},
+			wantErr: ErrInvalidLocation,
 		},
 	}
 
@@ -260,7 +301,14 @@ func TestFetchLocation(t *testing.T) {
 			}
 
 			resp, err := g.fetchLocation(context.Background(), tt.location)
-			if err != nil {
+			if tt.wantErr != nil {
+				if !errors.Is(err, ErrInvalidLocation) {
+					t.Errorf("wanted err 'ErrInvalidLocation', got: %v", err)
+				}
+				if resp != nil {
+					t.Errorf("wanted response to be nil, got: %v", resp)
+				}
+			} else if err != nil {
 				t.Fatalf("failed in fetchLocationId: %v", err)
 			}
 
@@ -303,45 +351,28 @@ func TestFetchLocation(t *testing.T) {
 				t.Errorf("want http call to be nill, got %v", mock.req)
 			}
 
-			wantLocID := 2622109
-			wantLocType := "C"
-			if wantLocID != resp.LocationID {
-				t.Errorf("wanted locationId to be %d, got %d", wantLocID, resp.LocationID)
-			}
-			if wantLocType != resp.LocationType {
-				t.Errorf("wanted locationType to be %s, got %s", wantLocType, resp.LocationType)
-			}
+			if tt.wantErr == nil {
+				wantLocID := 2622109
+				wantLocType := "C"
+				if wantLocID != resp.LocationID {
+					t.Errorf("wanted locationId to be %d, got %d", wantLocID, resp.LocationID)
+				}
+				if wantLocType != resp.LocationType {
+					t.Errorf("wanted locationType to be %s, got %s", wantLocType, resp.LocationType)
+				}
 
-			// Assess the location was cached.
-			v, _ := g.lCache.Load(tt.location)
-			cLoc := v.(*location)
-			if wantLocID != cLoc.LocationID {
-				t.Errorf("wanted cached locationId to be %d, got %d", wantLocID, cLoc.LocationID)
-			}
-			if wantLocType != cLoc.LocationType {
-				t.Errorf("wanted cached locationType to be %s, got %s", wantLocType, cLoc.LocationType)
+				// Assess the location was cached.
+				v, _ := g.lCache.Load(tt.location)
+				cLoc := v.(*location)
+				if wantLocID != cLoc.LocationID {
+					t.Errorf("wanted cached locationId to be %d, got %d", wantLocID, cLoc.LocationID)
+				}
+				if wantLocType != cLoc.LocationType {
+					t.Errorf("wanted cached locationType to be %s, got %s", wantLocType, cLoc.LocationType)
+				}
 			}
 		})
 	}
-
-	t.Run("location 200 with empty array", func(t *testing.T) {
-		mock := newGlassdoorMock(t)
-		g := &glassdoor{
-			client: retryhttp.New(
-				retryhttp.WithTransport(mock),
-				retryhttp.WithRandomUserAgent(),
-			),
-			lCache: sync.Map{},
-		}
-
-		_, err := g.fetchLocation(context.Background(), "")
-		if err == nil {
-			t.Error("wanted err, got nil")
-		}
-		if err.Error() != "location not found" {
-			t.Errorf("wanted err to be 'location not found', got %s", err.Error())
-		}
-	})
 }
 
 type glassdoorMock struct {
@@ -368,8 +399,7 @@ func (g *glassdoorMock) RoundTrip(req *http.Request) (*http.Response, error) {
 	var fn string
 	switch req.URL.Path {
 	case locationEndpoint:
-		if req.URL.Query().Get(paramTerm) == "" {
-			fmt.Println(req.Form.Get(paramTerm))
+		if req.URL.Query().Get(paramTerm) == "invalid" {
 			resp.Body = io.NopCloser(strings.NewReader("[]"))
 		} else {
 			fn = "test_data/location.json"
