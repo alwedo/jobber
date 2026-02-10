@@ -38,9 +38,15 @@ var locationMap = map[string]string{
 	"N": "COUNTRY",
 }
 
+var ErrInvalidLocation = errors.New("invalid location")
+
 type location struct {
 	LocationID   int    `json:"locationId"`
 	LocationType string `json:"locationType"`
+
+	// We cache invalid locations so we don't call
+	// Glassdoor every time if a query contains one.
+	invalid bool
 }
 
 type response struct {
@@ -109,6 +115,10 @@ func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([
 
 	body, err := g.newRequestBody(ctx, query)
 	if err != nil {
+		if errors.Is(err, ErrInvalidLocation) {
+			// If we find an invalid location we just skip Glassdoor altogether.
+			return nil, nil
+		}
 		return nil, fmt.Errorf("unable to create newRequestBody in glassdoor.Scrape: %w", err)
 	}
 
@@ -223,7 +233,11 @@ func (g *glassdoor) newRequestBody(ctx context.Context, q *db.GetQueryScraperRow
 func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, error) {
 	// We cache locations to avoid calling glassdoor every time for known ones.
 	if v, ok := g.lCache.Load(loc); ok {
-		return v.(*location), nil
+		l := v.(*location)
+		if l.invalid {
+			return nil, ErrInvalidLocation
+		}
+		return l, nil
 	}
 
 	params := &url.Values{}
@@ -263,14 +277,20 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 
 	// Glassdoor returns a list of location matches for the search term.
 	// We pick the first one and store it in the cache.
-	// If there are no locations we log an error for further analysis.
-	if len(l) == 0 {
-		return nil, errors.New("location not found")
+	// It is possible for it to return an empty array and a 200 response if
+	// the location passed is very odd and returns no findings. In that case
+	// we cache it as invalid and return ErrInvalidLocation.
+	result := &location{invalid: true}
+	if len(l) != 0 {
+		result = &l[0]
 	}
-	result := &l[0]
+
 	actual, loaded := g.lCache.LoadOrStore(loc, result)
 	if loaded {
-		return actual.(*location), nil
+		result = actual.(*location)
+	}
+	if result.invalid {
+		return nil, ErrInvalidLocation
 	}
 
 	return result, nil
