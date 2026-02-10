@@ -277,7 +277,9 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 
 	// Glassdoor returns a list of location matches for the search term.
 	// We pick the first one and store it in the cache.
-	// If there are no locations we cache it as invalid and return ErrInvalidLocation.
+	// It is possible for it to return an empty array and a 200 response if
+	// the location passed is very odd and returns no findings. In that case
+	// we cache it as invalid and return ErrInvalidLocation.
 	result := &location{invalid: true}
 	if len(l) != 0 {
 		result = &l[0]
