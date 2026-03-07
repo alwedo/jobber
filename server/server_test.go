@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -118,6 +119,17 @@ func TestServer(t *testing.T) {
 			},
 			wantStatus:     http.StatusBadRequest,
 			wantBodyString: "missing params: [keywords], invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
+		},
+		{
+			name:   "with exceeding data on form",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: strings.Repeat("golang job ", 200),
+				queryParamLocation: "the moon",
+			},
+			wantStatus:     http.StatusRequestEntityTooLarge,
+			wantBodyString: "request body too large\n",
 		},
 		{
 			name:   "valid XML feed",
@@ -287,10 +299,24 @@ func TestServer(t *testing.T) {
 			if err != nil {
 				t.Errorf("unable to parse server URL: %v", err)
 			}
-			url.RawQuery = qp.Encode()
-			req, err := http.NewRequest(tt.method, url.String(), nil)
+
+			// On POST requests we pass the query params in the body
+			// and set the content type to application/x-www-form-urlencoded
+			// as the browser would.
+			var reqBody io.Reader
+			if tt.method == http.MethodPost {
+				reqBody = strings.NewReader(qp.Encode())
+			} else {
+				url.RawQuery = qp.Encode()
+			}
+
+			req, err := http.NewRequest(tt.method, url.String(), reqBody)
 			if err != nil {
 				t.Errorf("unable to create http request: %v", err)
+			}
+
+			if tt.method == http.MethodPost && len(tt.params) > 0 {
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			}
 			if tt.headers != nil {
 				for k, v := range tt.headers {
@@ -321,18 +347,18 @@ func TestServer(t *testing.T) {
 					}
 				}
 			}
-			body, err := io.ReadAll(r.Body)
+			respBody, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Errorf("unable to read response body: %v", err)
 			}
 			if tt.wantBodyAssert != "" {
 				approvals.UseFolder("approvals")
-				approvals.VerifyString(t, string(body),
+				approvals.VerifyString(t, string(respBody),
 					approvals.Options().ForFile().WithExtension(tt.wantBodyAssert).WithScrubber(scroobbyDoobyDoo),
 				)
 			}
-			if tt.wantBodyString != "" && tt.wantBodyString != string(body) {
-				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(body))
+			if tt.wantBodyString != "" && tt.wantBodyString != string(respBody) {
+				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(respBody))
 			}
 		})
 	}
