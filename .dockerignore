@@ -8,5 +8,6 @@ Makefile
 .DS_Store
 postgres-data/
 grafana-data/
+prometheus-data/
 docker-compose.yml
 sqlc.yaml
