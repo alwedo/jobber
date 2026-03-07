@@ -337,8 +337,8 @@ func TestServer(t *testing.T) {
 					if k == "Cache-Control" && tt.name == "valid XML feed" {
 						// Fix flaky test where some times the test 'valid XML feed' takes more
 						// than 1s to get processed and the max-age value is 2s older instead of 1.
-						if wantHeader != gotHeader || wantHeader != "max-age=1798" {
-							t.Errorf("wanted header %s to be %s, got %s", k, wantHeader, gotHeader)
+						if gotHeader != wantHeader && gotHeader != "max-age=1798" {
+							t.Errorf("wanted header %s to be either %s or %s, got %s", k, wantHeader, "max-age=1798", gotHeader)
 						}
 					} else {
 						if wantHeader != gotHeader {
