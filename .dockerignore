@@ -1,0 +1,12 @@
+.git
+.gitignore
+.gitattributes
+.github
+*.md
+Makefile
+.golangci.yml
+.DS_Store
+postgres-data/
+grafana-data/
+docker-compose.yml
+sqlc.yaml
