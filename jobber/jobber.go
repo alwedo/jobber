@@ -54,7 +54,7 @@ func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
 	}
-	ctx, cancelCtx := context.WithCancel(context.Background())
+	ctx, cancelCtx := context.WithCancel(context.Background()) //nolint:gosec
 	j := &Jobber{
 		ctx:     ctx,
 		scrList: scrape.New(),

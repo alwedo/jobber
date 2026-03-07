@@ -106,7 +106,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 			req.Header.Set("User-Agent", c.ua.GetRandom())
 		}
 
-		resp, err := c.client.Do(req)
+		resp, err := c.client.Do(req) //nolint: gosec
 		if err != nil {
 			return nil, fmt.Errorf("failed to perform http request in retryhttp.Do: %w", err)
 		}

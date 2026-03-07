@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,6 +121,17 @@ func TestServer(t *testing.T) {
 			wantBodyString: "missing params: [keywords], invalid params: [location], only [A-Za-z0-9] allowed for keywords and [A-Za-z] for location",
 		},
 		{
+			name:   "with exceeding data on form",
+			path:   "/feeds",
+			method: http.MethodPost,
+			params: map[string]string{
+				queryParamKeywords: strings.Repeat("golang job ", 200),
+				queryParamLocation: "the moon",
+			},
+			wantStatus:     http.StatusRequestEntityTooLarge,
+			wantBodyString: "request body too large\n",
+		},
+		{
 			name:   "valid XML feed",
 			path:   "/feeds",
 			method: http.MethodGet,
@@ -151,16 +163,15 @@ func TestServer(t *testing.T) {
 			},
 		},
 		{
-			name:   "invalid XML feed", // Returns a valid xml with a single post with instructions.
+			name:   "invalid XML feed",
 			path:   "/feeds",
 			method: http.MethodGet,
 			params: map[string]string{
 				queryParamKeywords: "fluffy dogs",
 				queryParamLocation: "the moon",
 			},
-			wantStatus:     http.StatusOK,
-			wantHeaders:    map[string]string{"Content-Type": "application/rss+xml"},
-			wantBodyAssert: "xml",
+			wantStatus:     http.StatusNotFound,
+			wantBodyString: "404 page not found\n",
 		},
 		{
 			name:   "valid HTML feed",
@@ -176,7 +187,7 @@ func TestServer(t *testing.T) {
 			wantBodyAssert: "html",
 		},
 		{
-			name:   "invalid HTML feed", // Returns a valid html with instructions.
+			name:   "invalid HTML feed",
 			path:   "/feeds",
 			method: http.MethodGet,
 			params: map[string]string{
@@ -184,9 +195,8 @@ func TestServer(t *testing.T) {
 				queryParamLocation: "the moon",
 			},
 			headers:        map[string]string{"Accept": "text/html"},
-			wantStatus:     http.StatusOK,
-			wantHeaders:    map[string]string{"Content-Type": "text/html"},
-			wantBodyAssert: "html",
+			wantStatus:     http.StatusNotFound,
+			wantBodyString: "404 page not found\n",
 		},
 		{
 			name:   "with missing param keywords",
@@ -289,10 +299,24 @@ func TestServer(t *testing.T) {
 			if err != nil {
 				t.Errorf("unable to parse server URL: %v", err)
 			}
-			url.RawQuery = qp.Encode()
-			req, err := http.NewRequest(tt.method, url.String(), nil)
+
+			// On POST requests we pass the query params in the body
+			// and set the content type to application/x-www-form-urlencoded
+			// as the browser would.
+			var reqBody io.Reader
+			if tt.method == http.MethodPost {
+				reqBody = strings.NewReader(qp.Encode())
+			} else {
+				url.RawQuery = qp.Encode()
+			}
+
+			req, err := http.NewRequest(tt.method, url.String(), reqBody)
 			if err != nil {
 				t.Errorf("unable to create http request: %v", err)
+			}
+
+			if tt.method == http.MethodPost && len(tt.params) > 0 {
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			}
 			if tt.headers != nil {
 				for k, v := range tt.headers {
@@ -323,18 +347,18 @@ func TestServer(t *testing.T) {
 					}
 				}
 			}
-			body, err := io.ReadAll(r.Body)
+			respBody, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Errorf("unable to read response body: %v", err)
 			}
 			if tt.wantBodyAssert != "" {
 				approvals.UseFolder("approvals")
-				approvals.VerifyString(t, string(body),
+				approvals.VerifyString(t, string(respBody),
 					approvals.Options().ForFile().WithExtension(tt.wantBodyAssert).WithScrubber(scroobbyDoobyDoo),
 				)
 			}
-			if tt.wantBodyString != "" && tt.wantBodyString != string(body) {
-				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(body))
+			if tt.wantBodyString != "" && tt.wantBodyString != string(respBody) {
+				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(respBody))
 			}
 		})
 	}

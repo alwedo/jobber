@@ -147,7 +147,6 @@ type feedData struct {
 	Location string
 	Host     string
 	Offers   []*db.Offer
-	NotFound bool
 }
 
 func (s *server) feed() http.HandlerFunc {
@@ -160,7 +159,6 @@ func (s *server) feed() http.HandlerFunc {
 		var (
 			keywords = params.Get(queryParamKeywords)
 			location = params.Get(queryParamLocation)
-			notFound bool
 		)
 
 		offers, updatedAt, err := s.jobber.ListOffers(r.Context(), &db.GetQueryParams{
@@ -169,12 +167,11 @@ func (s *server) feed() http.HandlerFunc {
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				notFound = true
-				s.logger.Info("no query found in server.feed", slog.Any("params", params), slog.String("error", err.Error()))
+				http.NotFound(w, r)
 			} else {
 				s.internalError(w, "failed to get query in server.feed", err)
-				return
 			}
+			return
 		}
 		if updatedAt != nil && updatedAt.Valid {
 			// We set a Cache-Control header with max-age so clients don't
@@ -207,7 +204,6 @@ func (s *server) feed() http.HandlerFunc {
 			Keywords: keywords,
 			Location: location,
 			Host:     r.Host,
-			NotFound: notFound,
 			Offers:   offers,
 		}); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
@@ -261,6 +257,13 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 // validateParams receives a list of params, validate they've been supplied in the request and normalizes them.
 // If a param is missing or contains invalid characters, it will respond with 400.
 func validateParams(params []string, w http.ResponseWriter, r *http.Request) (url.Values, error) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1024)
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+		return nil, fmt.Errorf("request body too large: %w", err)
+	}
+
 	missing := []string{}
 	invalid := []string{}
 	valid := url.Values{}

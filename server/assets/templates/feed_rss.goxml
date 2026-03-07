@@ -1,19 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
 
-<channel>{{ if .NotFound }}
-  <title>feed not found :(</title>
-  <link>https://{{.Host}}</link>
-  <description
-        >no feed has been found for {{.Keywords}} jobs in {{.Location}}</description>
-
-  <item>
-  <title>no feed has been found for {{.Keywords}} jobs in {{.Location}}</title>
-  <description
-            ><![CDATA[try creating a new job search feed <a href="/">here</a>]]></description>
-    <link>https://{{.Host}}</link>
-    <guid isPermaLink="false">1</guid>
-  </item>{{ else }}
+<channel>
   <title>{{.Keywords}} jobs in {{.Location}}</title>
   <link>https://{{.Host}}</link>
   <description>{{.Keywords}} jobs in {{.Location}}</description>
@@ -34,5 +22,5 @@
     <guid isPermaLink="false">{{.ID}}</guid>
   </item>
   {{ end }}
-{{ end }}</channel>
+</channel>
 </rss>
