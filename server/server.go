@@ -147,7 +147,6 @@ type feedData struct {
 	Location string
 	Host     string
 	Offers   []*db.Offer
-	NotFound bool
 }
 
 func (s *server) feed() http.HandlerFunc {
@@ -160,7 +159,6 @@ func (s *server) feed() http.HandlerFunc {
 		var (
 			keywords = params.Get(queryParamKeywords)
 			location = params.Get(queryParamLocation)
-			notFound bool
 		)
 
 		offers, updatedAt, err := s.jobber.ListOffers(r.Context(), &db.GetQueryParams{
@@ -169,12 +167,11 @@ func (s *server) feed() http.HandlerFunc {
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				notFound = true
-				s.logger.Info("no query found in server.feed", slog.Any("params", params), slog.String("error", err.Error()))
+				http.NotFound(w, r)
 			} else {
 				s.internalError(w, "failed to get query in server.feed", err)
-				return
 			}
+			return
 		}
 		if updatedAt != nil && updatedAt.Valid {
 			// We set a Cache-Control header with max-age so clients don't
@@ -207,7 +204,6 @@ func (s *server) feed() http.HandlerFunc {
 			Keywords: keywords,
 			Location: location,
 			Host:     r.Host,
-			NotFound: notFound,
 			Offers:   offers,
 		}); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
