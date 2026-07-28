@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -35,9 +34,9 @@ func NewTestDB(t testing.TB) (*Queries, func()) {
 	ctx := context.Background()
 
 	var (
-		dbImage          = "postgres:latest"
-		dbName           = "jobber"
-		dbPort  nat.Port = "5432/tcp"
+		dbImage = "postgres:latest"
+		dbName  = "jobber"
+		dbPort  = "5432/tcp"
 	)
 
 	postgresContainer, err := postgres.Run(ctx,

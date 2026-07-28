@@ -78,7 +78,7 @@ func TestCreateQuery(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		for _, jb := range j.sched.Jobs() {
 			if slices.Contains(jb.Tags(), k+l) {
-				lr, _ := jb.LastRun() //nolint: errcheck
+				lr, _ := jb.LastRunStartedAt() //nolint: errcheck
 				if lr.Before(time.Now().Add(-time.Second)) {
 					t.Errorf("expected created query to have been performed immediately, got %v", lr)
 				}
@@ -126,7 +126,7 @@ func TestCreateWithTimeOut(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	for _, jb := range j.sched.Jobs() {
 		if slices.Contains(jb.Tags(), "cuaksqueek") {
-			lr, _ := jb.LastRun() //nolint: errcheck
+			lr, _ := jb.LastRunStartedAt() //nolint: errcheck
 			if lr.Before(time.Now().Add(-time.Second)) {
 				t.Errorf("expected created query to have been performed immediately, got %v", lr)
 			}
