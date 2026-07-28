@@ -110,7 +110,7 @@ func (s *server) create() http.HandlerFunc {
 		}
 
 		var timedOut bool
-		if err := s.jobber.CreateQuery(params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
+		if err := s.jobber.CreateQuery(r.Context(), params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
 			if errors.Is(err, jobber.ErrTimedOut) {
 				timedOut = true
 			} else {

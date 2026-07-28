@@ -25,7 +25,6 @@ import (
 )
 
 type Jobber struct {
-	ctx     context.Context
 	scrList scrape.List
 	logger  *slog.Logger
 	db      *db.Queries
@@ -49,14 +48,13 @@ func WithScrapeList(sl scrape.List) Options {
 	}
 }
 
-func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
+func New(ctx context.Context, log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	sched, err := gocron.NewScheduler()
 	if err != nil {
 		log.Error("failed to create scheduler", slog.String("error", err.Error()))
 	}
-	ctx, cancelCtx := context.WithCancel(context.Background()) //nolint:gosec
+	ctx, cancelCtx := context.WithCancel(ctx) //nolint:gosec
 	j := &Jobber{
-		ctx:     ctx,
 		scrList: scrape.New(),
 		logger:  log,
 		db:      db,
@@ -69,14 +67,14 @@ func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 	}
 
 	// Initial job scheduling.
-	queries, err := j.db.ListQueries(j.ctx)
+	queries, err := j.db.ListQueries(ctx)
 	if err != nil {
 		j.logger.Error("unable to list queries in jobber.scheduleQueries", slog.String("error", err.Error()))
 	}
 	for _, q := range queries {
-		j.scheduleQuery(q)
+		j.scheduleQuery(ctx, q)
 	}
-	j.schedDeleteOldOffers()
+	j.schedDeleteOldOffers(ctx)
 	j.sched.Start()
 
 	return j, func() {
@@ -90,8 +88,8 @@ func New(log *slog.Logger, db *db.Queries, opts ...Options) (*Jobber, func()) {
 // CreateQuery creates a new query, schedules it for future runs
 // and also runs it immediately. While running it immediately it
 // will block the caller until the job finishes or it times out.
-func (j *Jobber) CreateQuery(keywords, location string) error {
-	query, err := j.db.CreateQuery(j.ctx, &db.CreateQueryParams{
+func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) error {
+	query, err := j.db.CreateQuery(ctx, &db.CreateQueryParams{
 		Keywords: keywords,
 		Location: location,
 	})
@@ -123,10 +121,12 @@ func (j *Jobber) CreateQuery(keywords, location string) error {
 		})),
 	}
 
-	j.scheduleQuery(query, o...)
+	j.scheduleQuery(ctx, query, o...)
 
 	// Blocks and waits for the job to finish or for a timeout.
 	select {
+	case <-ctx.Done():
+		return context.Canceled
 	case <-done:
 		return nil
 	case <-time.After(j.timeOut):
@@ -153,7 +153,7 @@ func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.
 	return o, &q.UpdatedAt, nil
 }
 
-func (j *Jobber) runQuery(qID int64, scraperName string) {
+func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 	logAttr := []any{slog.Int64("queryID", qID), slog.String("scraper", scraperName)}
 
 	s, ok := j.scrList[scraperName]
@@ -162,7 +162,7 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 		return
 	}
 
-	q, err := j.db.GetQueryScraper(j.ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: scraperName})
+	q, err := j.db.GetQueryScraper(ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: scraperName})
 	if err != nil {
 		j.logger.Error("unable to get query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		return
@@ -171,7 +171,7 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 
 	// We remove queries that haven't been used for longer than 7 days.
 	if time.Since(q.QueriedAt.Time) > time.Hour*24*7 {
-		if err := j.db.DeleteQuery(j.ctx, q.ID); err != nil {
+		if err := j.db.DeleteQuery(ctx, q.ID); err != nil {
 			j.logger.Error("unable to delete query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 		j.sched.RemoveByTags(q.Keywords + q.Location)
@@ -181,7 +181,7 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 		return
 	}
 
-	offers, err := s.Scrape(j.ctx, q)
+	offers, err := s.Scrape(ctx, q)
 	if err != nil {
 		j.logger.Error("scrape in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		// We only return after an error if there are no offers since
@@ -193,23 +193,23 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 
 	if len(offers) > 0 {
 		for _, o := range offers {
-			if err := j.db.CreateOffer(j.ctx, &o); err != nil {
+			if err := j.db.CreateOffer(ctx, &o); err != nil {
 				j.logger.Error("unable to create offer in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 				continue
 			}
-			if err := j.db.CreateQueryOfferAssoc(j.ctx, &db.CreateQueryOfferAssocParams{
+			if err := j.db.CreateQueryOfferAssoc(ctx, &db.CreateQueryOfferAssocParams{
 				QueryID: q.ID,
 				OfferID: o.ID,
 			}); err != nil {
 				j.logger.Error("unable to create query offer association in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 			}
 		}
-		if err := j.db.UpdateQueryScrapedAt(j.ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: scraperName}); err != nil {
+		if err := j.db.UpdateQueryScrapedAt(ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: scraperName}); err != nil {
 			j.logger.Error("unable to update scraper timestamp in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 	}
 
-	if err := j.db.UpdateQueryUAT(j.ctx, q.ID); err != nil {
+	if err := j.db.UpdateQueryUAT(ctx, q.ID); err != nil {
 		j.logger.Error("unable to update query timestamp in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 	}
 
@@ -217,7 +217,7 @@ func (j *Jobber) runQuery(qID int64, scraperName string) {
 }
 
 // Schedules the query for every scraper.
-func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
+func (j *Jobber) scheduleQuery(ctx context.Context, q *db.Query, o ...gocron.JobOption) {
 	// We stagger the query cron trigger by a minute per scraper to avoid
 	// further jobs being fired after a query has been deleted.
 	// By staggering we allow the first job to delete the query and the
@@ -239,7 +239,7 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 
 		job, err := j.sched.NewJob(
 			gocron.CronJob(cron, false),
-			gocron.NewTask(func(q int64) { j.runQuery(q, name) }, q.ID),
+			gocron.NewTask(func(q int64) { j.runQuery(ctx, q, name) }, q.ID),
 			opts...,
 		)
 		if err != nil {
@@ -256,11 +256,11 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	}
 }
 
-func (j *Jobber) schedDeleteOldOffers() {
+func (j *Jobber) schedDeleteOldOffers(ctx context.Context) {
 	_, err := j.sched.NewJob(
 		gocron.CronJob("0 2 * * *", false), // Every day at 2:00 am.
 		gocron.NewTask(func() {
-			if err := j.db.DeleteOldOffers(j.ctx); err != nil {
+			if err := j.db.DeleteOldOffers(ctx); err != nil {
 				j.logger.Error("unable to delete old offers", slog.String("error", err.Error()))
 			}
 		}),

@@ -31,7 +31,7 @@ func main() {
 	d, dbCloser := initDB(ctx, log)
 	defer dbCloser()
 
-	j, jCloser := jobber.New(log, d)
+	j, jCloser := jobber.New(ctx, log, d)
 	defer jCloser()
 
 	svr, err := server.New(log, j)

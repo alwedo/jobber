@@ -18,7 +18,7 @@ func TestConstructor(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := New(l, d, WithScrapeList(scrape.MockList))
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.MockList))
 	defer jCloser()
 
 	// Give the scheduler time to process initial jobs.
@@ -34,7 +34,7 @@ func TestConstructor(t *testing.T) {
 	})
 
 	t.Run("old offers should've been deleted", func(t *testing.T) {
-		offers, err := d.ListOffers(context.Background(), 1)
+		offers, err := d.ListOffers(t.Context(), 1)
 		if err != nil {
 			t.Errorf("wanted no error, got: %v", err)
 		}
@@ -48,7 +48,7 @@ func TestCreateQuery(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := New(l, d, WithScrapeList(scrape.List{
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{
 		"mock":  scrape.Mock,
 		"mock2": scrape.Mock,
 	}))
@@ -57,7 +57,7 @@ func TestCreateQuery(t *testing.T) {
 	t.Run("creates a query", func(t *testing.T) {
 		k := "cuak"
 		l := "squeek"
-		if err := j.CreateQuery(k, l); err != nil {
+		if err := j.CreateQuery(t.Context(), k, l); err != nil {
 			t.Fatalf("failed to create query: %s", err)
 		}
 		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: k, Location: l})
@@ -87,7 +87,7 @@ func TestCreateQuery(t *testing.T) {
 	})
 
 	t.Run("on existing query it returns the existing one", func(t *testing.T) {
-		if err := j.CreateQuery("golang", "berlin"); err != nil {
+		if err := j.CreateQuery(t.Context(), "golang", "berlin"); err != nil {
 			t.Fatalf("failed to create existing query: %s", err)
 		}
 		q, err := d.ListQueries(context.Background())
@@ -114,9 +114,9 @@ func TestCreateWithTimeOut(t *testing.T) {
 		"mock2": scrape.Mock,
 		"mock3": scrape.MockWithErr,
 	}
-	j, jCloser := New(l, d, WithScrapeList(sl), WithTimeOut(time.Nanosecond))
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(sl), WithTimeOut(time.Nanosecond))
 	defer jCloser()
-	err := j.CreateQuery("cuak", "squeek")
+	err := j.CreateQuery(t.Context(), "cuak", "squeek")
 	if !errors.Is(err, ErrTimedOut) {
 		t.Errorf("wanted err to be ErrTimedOut, got: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestListOffers(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	d, dbCloser := db.NewTestDB(t)
 	defer dbCloser()
-	j, jCloser := New(l, d, WithScrapeList(scrape.MockList))
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.MockList))
 	defer jCloser()
 
 	// Give the scheduler time to process initial jobs.
@@ -199,7 +199,7 @@ func TestRunQuery(t *testing.T) {
 	defer dbCloser()
 	mockScraperName := "Mock"
 	mockScraper := scrape.Mock
-	j, jCloser := New(l, d, WithScrapeList(scrape.List{mockScraperName: mockScraper}))
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{mockScraperName: mockScraper}))
 	defer jCloser()
 
 	t.Run("with valid query", func(t *testing.T) {
@@ -208,7 +208,7 @@ func TestRunQuery(t *testing.T) {
 		if err != nil {
 			t.Errorf("unable to retrieve seed query: %v", err)
 		}
-		j.runQuery(q.ID, mockScraperName)
+		j.runQuery(t.Context(), q.ID, mockScraperName)
 
 		t.Run("it calls the scraper", func(t *testing.T) {
 			if *mockScraper.LastQuery != *q {
@@ -232,7 +232,7 @@ func TestRunQuery(t *testing.T) {
 		if err != nil {
 			t.Errorf("unable to retrieve seed query: %v", err)
 		}
-		j.runQuery(q.ID, mockScraperName)
+		j.runQuery(t.Context(), q.ID, mockScraperName)
 		_, err = d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "python", Location: "san francisco"})
 		if !errors.Is(err, sql.ErrNoRows) {
 			t.Errorf("query should have been deleted but got: %v", err)
