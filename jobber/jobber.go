@@ -25,6 +25,7 @@ import (
 )
 
 type Jobber struct {
+	ctx     context.Context
 	scrList scrape.List
 	logger  *slog.Logger
 	db      *db.Queries
@@ -55,6 +56,7 @@ func New(ctx context.Context, log *slog.Logger, db *db.Queries, opts ...Options)
 	}
 	ctx, cancelCtx := context.WithCancel(ctx) //nolint:gosec
 	j := &Jobber{
+		ctx:     ctx,
 		scrList: scrape.New(),
 		logger:  log,
 		db:      db,
@@ -72,9 +74,9 @@ func New(ctx context.Context, log *slog.Logger, db *db.Queries, opts ...Options)
 		j.logger.Error("unable to list queries in jobber.scheduleQueries", slog.String("error", err.Error()))
 	}
 	for _, q := range queries {
-		j.scheduleQuery(ctx, q)
+		j.scheduleQuery(q)
 	}
-	j.schedDeleteOldOffers(ctx)
+	j.schedDeleteOldOffers()
 	j.sched.Start()
 
 	return j, func() {
@@ -121,7 +123,7 @@ func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) err
 		})),
 	}
 
-	j.scheduleQuery(ctx, query, o...)
+	j.scheduleQuery(query, o...)
 
 	// Blocks and waits for the job to finish or for a timeout.
 	select {
@@ -217,7 +219,7 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 }
 
 // Schedules the query for every scraper.
-func (j *Jobber) scheduleQuery(ctx context.Context, q *db.Query, o ...gocron.JobOption) {
+func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	// We stagger the query cron trigger by a minute per scraper to avoid
 	// further jobs being fired after a query has been deleted.
 	// By staggering we allow the first job to delete the query and the
@@ -239,7 +241,7 @@ func (j *Jobber) scheduleQuery(ctx context.Context, q *db.Query, o ...gocron.Job
 
 		job, err := j.sched.NewJob(
 			gocron.CronJob(cron, false),
-			gocron.NewTask(func(q int64) { j.runQuery(ctx, q, name) }, q.ID),
+			gocron.NewTask(func(q int64) { j.runQuery(j.ctx, q, name) }, q.ID),
 			opts...,
 		)
 		if err != nil {
@@ -256,11 +258,11 @@ func (j *Jobber) scheduleQuery(ctx context.Context, q *db.Query, o ...gocron.Job
 	}
 }
 
-func (j *Jobber) schedDeleteOldOffers(ctx context.Context) {
+func (j *Jobber) schedDeleteOldOffers() {
 	_, err := j.sched.NewJob(
 		gocron.CronJob("0 2 * * *", false), // Every day at 2:00 am.
 		gocron.NewTask(func() {
-			if err := j.db.DeleteOldOffers(ctx); err != nil {
+			if err := j.db.DeleteOldOffers(j.ctx); err != nil {
 				j.logger.Error("unable to delete old offers", slog.String("error", err.Error()))
 			}
 		}),
