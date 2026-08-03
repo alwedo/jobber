@@ -84,11 +84,15 @@ func HTTPMiddleware(next http.Handler) http.Handler {
 		httpRequestsInFlight.WithLabelValues(r.URL.Path).Inc()
 		defer httpRequestsInFlight.WithLabelValues(r.URL.Path).Dec()
 		start := time.Now()
-		rec := &statusRecorder{ResponseWriter: w, code: 200}
+		rec := &statusRecorder{ResponseWriter: w, code: 0}
 		next.ServeHTTP(rec, r)
 		d := time.Since(start).Seconds()
-		httpRequests.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(rec.code)).Observe(d)
-		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(rec.code)).Inc()
+		code := rec.code
+		if code == 0 {
+			code = http.StatusOK
+		}
+		httpRequests.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(code)).Observe(d)
+		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(code)).Inc()
 	})
 }
 
@@ -98,6 +102,17 @@ type statusRecorder struct {
 }
 
 func (r *statusRecorder) WriteHeader(code int) {
+	if r.code != 0 {
+		return
+	}
 	r.code = code
 	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *statusRecorder) Write(b []byte) (int, error) {
+	if r.code == 0 {
+		r.code = http.StatusOK
+		r.ResponseWriter.WriteHeader(http.StatusOK)
+	}
+	return r.ResponseWriter.Write(b)
 }

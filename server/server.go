@@ -250,7 +250,19 @@ func (s *server) static() http.HandlerFunc {
 }
 
 func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
-	s.logger.Error(msg, slog.String("error", err.Error()))
+	// If the client disconnected (broken pipe / connection reset) avoid
+	// attempting further writes which will only produce noise (and the
+	// superfluous WriteHeader log). Log at info and return.
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
+	if strings.Contains(errStr, "broken pipe") || strings.Contains(errStr, "connection reset by peer") {
+		s.logger.Info(msg, slog.String("error", errStr))
+		return
+	}
+
+	s.logger.Error(msg, slog.String("error", errStr))
 	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
 }
 
