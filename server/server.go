@@ -29,25 +29,18 @@ const (
 var isValidKeywords = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
 var isValidLocation = regexp.MustCompile(`^[A-Za-z ]+$`)
 
-type server struct {
-	logger *slog.Logger
-	jobber *jobber.Jobber
-	html   *htmlRenderer
-}
-
 func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	r, err := newHTMLRenderer(assets.HTMLFiles, "base.tmpl", "xmlfeed.tmpl", "partials/*.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse templates: %w", err)
 	}
 
-	s := &server{logger: l, jobber: j, html: r}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /feeds", s.feed())
-	mux.HandleFunc("POST /feeds", s.create())
+	mux.HandleFunc("GET /feeds", feed(l, r, j))
+	mux.HandleFunc("POST /feeds", create(l, r, j))
 	mux.Handle("GET /metrics", promhttp.Handler())
-	mux.HandleFunc("GET /help", s.help())
-	mux.HandleFunc("GET /", s.index())
+	mux.HandleFunc("GET /help", help(l, r))
+	mux.HandleFunc("GET /", index(l, r))
 	mux.Handle("GET /static/", staticHeadersMiddleware(http.StripPrefix("/static", http.FileServerFS(assets.StaticFiles))))
 
 	return &http.Server{
@@ -57,40 +50,40 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	}, nil
 }
 
-func (s *server) index() http.HandlerFunc {
+func index(log *slog.Logger, h *htmlRenderer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		if err := s.html.render(w, nil, "base", "pages/home.tmpl"); err != nil {
-			s.internalError(w, "failed to execute template in server.index", err)
+		if err := h.render(w, nil, "base", "pages/home.tmpl"); err != nil {
+			internalError(w, log, "failed to execute template in server.index", err)
 		}
 	}
 }
 
-func (s *server) help() http.HandlerFunc {
+func help(log *slog.Logger, h *htmlRenderer) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		if err := s.html.render(w, nil, "base", "pages/help.tmpl"); err != nil {
-			s.internalError(w, "failed to execute template in server.help", err)
+		if err := h.render(w, nil, "base", "pages/help.tmpl"); err != nil {
+			internalError(w, log, "failed to execute template in server.help", err)
 		}
 	}
 }
 
-func (s *server) create() http.HandlerFunc {
+func create(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			s.logger.Info("missing params in server.create", slog.String("error", err.Error()))
+			log.Info("missing params in server.create", slog.String("error", err.Error()))
 			return
 		}
 
 		var timedOut bool
-		if err := s.jobber.CreateQuery(r.Context(), params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
+		if err := j.CreateQuery(r.Context(), params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
 			if errors.Is(err, jobber.ErrTimedOut) {
 				timedOut = true
 			} else {
-				s.internalError(w, "failed to create query", err)
+				internalError(w, log, "failed to create query", err)
 				return
 			}
 		}
@@ -101,7 +94,7 @@ func (s *server) create() http.HandlerFunc {
 		}
 		u, err := url.Parse(scheme + r.Host + "/feeds")
 		if err != nil {
-			s.internalError(w, "failed to parse url in server.create", err)
+			internalError(w, log, "failed to parse url in server.create", err)
 			return
 		}
 		u.RawQuery = params.Encode()
@@ -111,24 +104,17 @@ func (s *server) create() http.HandlerFunc {
 			TimedOut bool
 		}{u.String(), timedOut}
 
-		if err := s.html.render(w, data, "partial:response:create"); err != nil {
-			s.internalError(w, "failed to execute template in server.create", err)
+		if err := h.render(w, data, "partial:response:create"); err != nil {
+			internalError(w, log, "failed to execute template in server.create", err)
 		}
 	}
 }
 
-type feedData struct {
-	Keywords string
-	Location string
-	Host     string
-	Offers   []*db.Offer
-}
-
-func (s *server) feed() http.HandlerFunc {
+func feed(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			s.logger.Info("missing params in server.feed", slog.String("error", err.Error()))
+			log.Info("missing params in server.feed", slog.String("error", err.Error()))
 			return
 		}
 		var (
@@ -136,7 +122,7 @@ func (s *server) feed() http.HandlerFunc {
 			location = params.Get(queryParamLocation)
 		)
 
-		offers, updatedAt, err := s.jobber.ListOffers(r.Context(), &db.GetQueryParams{
+		offers, updatedAt, err := j.ListOffers(r.Context(), &db.GetQueryParams{
 			Keywords: keywords,
 			Location: location,
 		})
@@ -144,7 +130,7 @@ func (s *server) feed() http.HandlerFunc {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.NotFound(w, r)
 			} else {
-				s.internalError(w, "failed to get query in server.feed", err)
+				internalError(w, log, "failed to get query in server.feed", err)
 			}
 			return
 		}
@@ -175,15 +161,20 @@ func (s *server) feed() http.HandlerFunc {
 		}
 		w.Header().Add("Content-Type", ct)
 
-		data := &feedData{
+		data := struct {
+			Keywords string
+			Location string
+			Host     string
+			Offers   []*db.Offer
+		}{
 			Keywords: keywords,
 			Location: location,
 			Host:     r.Host,
 			Offers:   offers,
 		}
 
-		if err := s.html.render(w, data, tmpl, addtmpl...); err != nil {
-			s.internalError(w, "failed to execute template in server.feed", err)
+		if err := h.render(w, data, tmpl, addtmpl...); err != nil {
+			internalError(w, log, "failed to execute template in server.feed", err)
 		}
 	}
 }
@@ -209,7 +200,7 @@ func staticHeadersMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
+func internalError(w http.ResponseWriter, l *slog.Logger, msg string, err error) {
 	// If the client disconnected (broken pipe / connection reset) avoid
 	// attempting further writes which will only produce noise (and the
 	// superfluous WriteHeader log). Log at info and return.
@@ -218,11 +209,11 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 		errStr = err.Error()
 	}
 	if strings.Contains(errStr, "broken pipe") || strings.Contains(errStr, "connection reset by peer") {
-		s.logger.Info(msg, slog.String("error", errStr))
+		l.Info(msg, slog.String("error", errStr))
 		return
 	}
 
-	s.logger.Error(msg, slog.String("error", errStr))
+	l.Error(msg, slog.String("error", errStr))
 	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
 }
 
