@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ func TestServer(t *testing.T) {
 		wantHeaders    map[string]string
 		wantBodyAssert string // takes the extension of the file you want to assert, ie. "html" or "xml"
 		wantBodyString string
+		wantBodyFn     func(testing.TB) string
 		jobberOpts     []jobber.Options
 	}{
 		{
@@ -236,7 +238,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			name:       "static endpoint style.css",
-			path:       "/static/style.v.1.0.0.css",
+			path:       "/static/css/style.css",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
 			wantHeaders: map[string]string{
@@ -244,14 +246,17 @@ func TestServer(t *testing.T) {
 				"Cache-Control":          "public, max-age=31536000, immutable",
 				"X-Content-Type-Options": "nosniff",
 			},
-			wantBodyString: func() string {
-				f, _ := assets.ReadFile(assetStyle) //nolint: errcheck
+			wantBodyFn: func(t testing.TB) string {
+				f, err := os.ReadFile("../assets/static/css/style.css")
+				if err != nil {
+					t.Fatalf("opening file: %v", err)
+				}
 				return string(f)
-			}(),
+			},
 		},
 		{
 			name:       "static endpoint script.js",
-			path:       "/static/script.v.1.0.0.js",
+			path:       "/static/js/script.js",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
 			wantHeaders: map[string]string{
@@ -259,10 +264,31 @@ func TestServer(t *testing.T) {
 				"Cache-Control":          "public, max-age=31536000, immutable",
 				"X-Content-Type-Options": "nosniff",
 			},
-			wantBodyString: func() string {
-				f, _ := assets.ReadFile(assetScript) //nolint: errcheck
+			wantBodyFn: func(t testing.TB) string {
+				f, err := os.ReadFile("../assets/static/js/script.js")
+				if err != nil {
+					t.Fatalf("opening file: %v", err)
+				}
 				return string(f)
-			}(),
+			},
+		},
+		{
+			name:       "static endpoint htmx",
+			path:       "/static/js/htmx.min.js",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type":           "application/javascript",
+				"Cache-Control":          "public, max-age=31536000, immutable",
+				"X-Content-Type-Options": "nosniff",
+			},
+			wantBodyFn: func(t testing.TB) string {
+				f, err := os.ReadFile("../assets/static/js/htmx.min.js")
+				if err != nil {
+					t.Fatalf("opening file: %v", err)
+				}
+				return string(f)
+			},
 		},
 		{
 			name:           "static endpoint notfound",
@@ -359,6 +385,12 @@ func TestServer(t *testing.T) {
 			}
 			if tt.wantBodyString != "" && tt.wantBodyString != string(respBody) {
 				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(respBody))
+			}
+			if tt.wantBodyFn != nil {
+				wantBody := tt.wantBodyFn(t)
+				if wantBody != string(respBody) {
+					t.Errorf("wanted body func '%s', got '%s'", wantBody, string(respBody))
+				}
 			}
 		})
 	}

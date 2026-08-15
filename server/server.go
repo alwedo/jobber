@@ -2,19 +2,17 @@ package server
 
 import (
 	"database/sql"
-	"embed"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 
+	"github.com/alwedo/jobber/assets"
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/jobber"
 	"github.com/alwedo/jobber/metrics"
@@ -22,55 +20,35 @@ import (
 )
 
 const (
-	// Path Params.
-	pathParamStatic = "static"
-
 	// Query Params.
 	queryParamKeywords = "keywords"
 	queryParamLocation = "location"
-
-	// Static assets.
-	assetStyle  = "assets/css/style.css"
-	assetScript = "assets/js/script.js"
-
-	// Templates.
-	tmplIndex          = "index.gohtml"
-	tmplHelp           = "help.gohtml"
-	tmplFeedRSS        = "feed_rss.goxml"
-	tmplFeedHTML       = "feed_html.gohtml"
-	tmplCreateResponse = "create_response.gohtml"
 )
-
-//go:embed assets/*
-var assets embed.FS
-
-// Static files validation regex.
-var isMainStyle = regexp.MustCompile(`^style\.v[\d.]+\.css$`)
-var isMainScript = regexp.MustCompile(`^script\.v[\d.]+\.js$`)
 
 // Input validation regex.
 var isValidKeywords = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
 var isValidLocation = regexp.MustCompile(`^[A-Za-z ]+$`)
 
 type server struct {
-	logger    *slog.Logger
-	jobber    *jobber.Jobber
-	templates *template.Template
+	logger *slog.Logger
+	jobber *jobber.Jobber
+	html   *htmlRenderer
 }
 
 func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
-	t, err := template.New("").Funcs(funcMap).ParseFS(assets, "assets/templates/*")
+	r, err := newHTMLRenderer(assets.HTMLFiles, "base.tmpl", "xmlfeed.tmpl", "partials/*.tmpl")
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse templates: %v", err)
+		return nil, fmt.Errorf("unable to parse templates: %w", err)
 	}
-	s := &server{logger: l, jobber: j, templates: t}
+
+	s := &server{logger: l, jobber: j, html: r}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /feeds", s.feed())
 	mux.HandleFunc("POST /feeds", s.create())
 	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("GET /help", s.help())
 	mux.HandleFunc("GET /", s.index())
-	mux.HandleFunc("GET /static/{static}", s.static())
+	mux.Handle("GET /static/", staticHeadersMiddleware(http.StripPrefix("/static", http.FileServerFS(assets.StaticFiles))))
 
 	return &http.Server{
 		Addr:              ":80",
@@ -85,18 +63,16 @@ func (s *server) index() http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		if err := s.templates.ExecuteTemplate(w, tmplIndex, nil); err != nil {
+		if err := s.html.render(w, nil, "base", "pages/home.tmpl"); err != nil {
 			s.internalError(w, "failed to execute template in server.index", err)
-			return
 		}
 	}
 }
 
 func (s *server) help() http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		if err := s.templates.ExecuteTemplate(w, tmplHelp, nil); err != nil {
+		if err := s.html.render(w, nil, "base", "pages/help.tmpl"); err != nil {
 			s.internalError(w, "failed to execute template in server.help", err)
-			return
 		}
 	}
 }
@@ -135,9 +111,8 @@ func (s *server) create() http.HandlerFunc {
 			TimedOut bool
 		}{u.String(), timedOut}
 
-		if err := s.templates.ExecuteTemplate(w, tmplCreateResponse, data); err != nil {
+		if err := s.html.render(w, data, "partial:response:create"); err != nil {
 			s.internalError(w, "failed to execute template in server.create", err)
-			return
 		}
 	}
 }
@@ -187,66 +162,51 @@ func (s *server) feed() http.HandlerFunc {
 			}
 		}
 
-		var tmpl string
 		// Set template and Content-Type header based on Accept header.
 		// If Accept header is 'text/html' we assue the request is coming
 		// from a browser, otherwise it's an RSS reader.
-		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
-		case true:
-			tmpl = tmplFeedHTML
-			w.Header().Add("Content-Type", "text/html")
-		default:
-			tmpl = tmplFeedRSS
-			w.Header().Add("Content-Type", "application/rss+xml")
+		ct := "application/rss+xml"
+		tmpl := "xmlfeed"
+		var addtmpl []string
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			ct = "text/html"
+			tmpl = "base"
+			addtmpl = []string{"pages/feed.tmpl"}
 		}
+		w.Header().Add("Content-Type", ct)
 
-		if err := s.templates.ExecuteTemplate(w, tmpl, &feedData{
+		data := &feedData{
 			Keywords: keywords,
 			Location: location,
 			Host:     r.Host,
 			Offers:   offers,
-		}); err != nil {
+		}
+
+		if err := s.html.render(w, data, tmpl, addtmpl...); err != nil {
 			s.internalError(w, "failed to execute template in server.feed", err)
-			return
 		}
 	}
 }
 
-func (s *server) static() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var a string
+func staticHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/static/")
+
 		var ct string
-
-		path := r.PathValue(pathParamStatic)
-
 		switch {
-		case isMainStyle.MatchString(path):
-			a = assetStyle
+		case strings.HasPrefix(path, "css/"):
 			ct = "text/css"
-		case isMainScript.MatchString(path):
-			a = assetScript
+		case strings.HasPrefix(path, "js/"):
 			ct = "application/javascript"
-		default:
-			http.NotFound(w, r)
-			return
 		}
 
-		f, err := assets.Open(a)
-		if err != nil {
-			s.internalError(w, "failed to open asset file "+a, err)
-			return
+		if ct != "" {
+			w.Header().Add("Content-Type", ct)
+			w.Header().Add("Cache-Control", "public, max-age=31536000, immutable")
+			w.Header().Add("X-Content-Type-Options", "nosniff")
 		}
-
-		w.Header().Add("Content-Type", ct)
-		w.Header().Add("Cache-Control", "public, max-age=31536000, immutable")
-		w.Header().Add("X-Content-Type-Options", "nosniff")
-
-		_, err = io.Copy(w, f)
-		if err != nil {
-			s.internalError(w, "failed to serve "+a, err)
-			return
-		}
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
@@ -308,13 +268,4 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 		return nil, fmt.Errorf("missing params in validateParams: %v", missing)
 	}
 	return valid, nil
-}
-
-var funcMap = template.FuncMap{
-	"pubDate": func(o *db.Offer) string {
-		return o.PostedAt.Time.Format(time.RFC1123Z)
-	},
-	"postedAt": func(o *db.Offer) string {
-		return o.PostedAt.Time.Format("Jan 2")
-	},
 }
