@@ -140,19 +140,19 @@ func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) err
 // ListOffers return the list of offers for a given query's keywords
 // and location and the last time the query was updated to calculate
 // the Cache-Control header. Returns sql.ErrNoRows for non-existent query.
-func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.Offer, *pgtype.Timestamptz, error) {
-	q, err := j.db.GetQuery(ctx, gqp)
+func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetAndUpdateQueryParams) ([]*db.Offer, pgtype.Timestamptz, error) {
+	var uat pgtype.Timestamptz
+	q, err := j.db.GetAndUpdateQuery(ctx, gqp)
 	if err != nil {
-		return nil, nil, fmt.Errorf("getting query in jobber.ListOffers: %w", err)
+		return nil, uat, fmt.Errorf("getting query in jobber.ListOffers: %w", err)
 	}
-	if err := j.db.UpdateQueryQAT(ctx, q.ID); err != nil {
-		j.logger.Error("unable to update query timestamp in jobber.ListOffers", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
-	}
+	uat = q.UpdatedAt
+
 	o, err := j.db.ListOffers(ctx, q.ID)
 	if err != nil {
-		return o, nil, fmt.Errorf("listing offers in jobber.ListOffers: %w", err)
+		return o, uat, fmt.Errorf("listing offers in jobber.ListOffers: %w", err)
 	}
-	return o, &q.UpdatedAt, nil
+	return o, uat, nil
 }
 
 func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {

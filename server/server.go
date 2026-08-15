@@ -122,7 +122,7 @@ func feed(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc 
 			location = params.Get(queryParamLocation)
 		)
 
-		offers, updatedAt, err := j.ListOffers(r.Context(), &db.GetQueryParams{
+		offers, updatedAt, err := j.ListOffers(r.Context(), &db.GetAndUpdateQueryParams{
 			Keywords: keywords,
 			Location: location,
 		})
@@ -134,18 +134,15 @@ func feed(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc 
 			}
 			return
 		}
-		if updatedAt != nil && updatedAt.Valid {
+		if updatedAt.Valid && time.Since(updatedAt.Time) < time.Hour {
 			// We set a Cache-Control header with max-age so clients don't
 			// waste time re-fetching information that hasn't been updated.
 			// Since the queries get updated hourly, we want the max-age value
 			// to be time in seconds until the next update.
 			// If the calculated value is more than one hour we don't retun the
 			// header since we can't guarantee when the next update will be.
-			lastUpdate := time.Since(updatedAt.Time)
-			if lastUpdate < time.Hour {
-				t := time.Hour - lastUpdate
-				w.Header().Add("Cache-Control", "max-age="+strconv.Itoa(int(t.Seconds())))
-			}
+			t := time.Hour - time.Since(updatedAt.Time)
+			w.Header().Add("Cache-Control", "max-age="+strconv.Itoa(int(t.Seconds())))
 		}
 
 		// Set template and Content-Type header based on Accept header.
