@@ -20,7 +20,8 @@ import (
 
 func TestServer(t *testing.T) {
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
+	pool, dbCloser := db.NewTestDB(t)
+	d := db.New(pool)
 	defer dbCloser()
 
 	tests := []struct {

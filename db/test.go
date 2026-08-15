@@ -29,7 +29,7 @@ INSERT INTO query_offers (query_id, offer_id) VALUES
 (1, 'existing_offer');
 `
 
-func NewTestDB(t testing.TB) (*Queries, func()) {
+func NewTestDB(t testing.TB) (*pgxpool.Pool, func()) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -78,7 +78,7 @@ func NewTestDB(t testing.TB) (*Queries, func()) {
 		t.Fatalf("unable to seed DB: %v", err)
 	}
 
-	return New(conn), func() {
+	return conn, func() {
 		conn.Close()
 		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
 			t.Errorf("failed to terminate container: %s", err)
