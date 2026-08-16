@@ -74,7 +74,7 @@ func create(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			log.Info("missing params in server.create", slog.String("error", err.Error()))
+			log.Info("validateParams in server.create", slog.String("error", err.Error()))
 			return
 		}
 
@@ -114,7 +114,7 @@ func feed(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc 
 	return func(w http.ResponseWriter, r *http.Request) {
 		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			log.Info("missing params in server.feed", slog.String("error", err.Error()))
+			log.Info("validateParams in server.feed", slog.String("error", err.Error()))
 			return
 		}
 		var (
@@ -218,10 +218,14 @@ func internalError(w http.ResponseWriter, l *slog.Logger, msg string, err error)
 // If a param is missing or contains invalid characters, it will respond with 400.
 func validateParams(params []string, w http.ResponseWriter, r *http.Request) (url.Values, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1024)
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-		return nil, fmt.Errorf("request body too large: %w", err)
+	if err := r.ParseForm(); err != nil {
+		var maxErr *http.MaxBytesError
+		if ok := errors.As(err, &maxErr); ok {
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return nil, fmt.Errorf("request body too large: %w", err)
+		}
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return nil, fmt.Errorf("parsing form: %w", err)
 	}
 
 	missing := []string{}
