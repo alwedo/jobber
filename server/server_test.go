@@ -304,6 +304,12 @@ func TestServer(t *testing.T) {
 			method:     http.MethodPost,
 			wantStatus: http.StatusMethodNotAllowed,
 		},
+		{
+			name:       "ping healthz returns ok",
+			path:       "/healthz",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {

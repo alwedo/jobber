@@ -42,6 +42,7 @@ func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
 	mux.HandleFunc("GET /help", help(l, r))
 	mux.HandleFunc("GET /", index(l, r))
 	mux.Handle("GET /static/", staticHeadersMiddleware(http.StripPrefix("/static", http.FileServerFS(assets.StaticFiles))))
+	mux.HandleFunc("GET /healthz", func(_ http.ResponseWriter, _ *http.Request) {})
 
 	return &http.Server{
 		Addr:              ":80",
