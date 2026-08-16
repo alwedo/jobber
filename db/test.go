@@ -1,10 +1,8 @@
 package db
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
@@ -12,77 +10,41 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-var seed = `
-INSERT INTO queries (keywords, location, queried_at, updated_at) VALUES
-('python', 'san francisco', CURRENT_TIMESTAMP - INTERVAL '8 days', NULL),
-('data scientist', 'new york', CURRENT_TIMESTAMP, NULL),
-('golang', 'berlin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP - INTERVAL '30 minutes'),
-('retry', 'berlin', CURRENT_TIMESTAMP, NULL);
-INSERT INTO offers (id, title, company, location, posted_at, description, source, url) VALUES
-('offer_001', 'Senior Python Developer', 'TechCorp Inc', 'San Francisco, CA', CURRENT_TIMESTAMP - INTERVAL '8 days', '', 'LinkedIn', ''),
-('existing_offer', 'Junior Golang Dweeb', 'Späti GmbH', 'Berlin', CURRENT_TIMESTAMP, '', 'LinkedIn', 'https://www.linkedin.com/jobs/view/existing_offer'),
-('existing_offer2', 'Senior Golang Dweeb', 'Späti GmbH', 'Berlin', CURRENT_TIMESTAMP, 'some nifty description', 'Stepstone', 'https://www.stepstone.de/senior_golang_dweeb');
-INSERT INTO query_offers (query_id, offer_id) VALUES
-(1, 'offer_001'),
-(3, 'existing_offer'),
-(3, 'existing_offer2'),
-(1, 'existing_offer');
-`
-
-func NewTestDB(t testing.TB) (*pgxpool.Pool, func()) {
+func NewTestContainer(t testing.TB) (string, func()) {
 	t.Helper()
-	ctx := context.Background()
 
-	var (
-		dbImage = "postgres:latest"
-		dbName  = "jobber"
-		dbPort  = "5432/tcp"
-	)
-
-	postgresContainer, err := postgres.Run(ctx,
-		dbImage,
-		postgres.WithDatabase(dbName),
+	postgresContainer, err := postgres.Run(t.Context(),
+		"postgres:latest",
 		postgres.WithInitScripts(fetchMigrationFiles(t)...),
 		testcontainers.WithWaitStrategy(
-			wait.ForListeningPort(dbPort)),
+			wait.ForExposedPort()),
 	)
 	if err != nil {
 		t.Fatalf("failed to start DB container: %s", err)
 	}
 
-	connStr, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+	connStr, err := postgresContainer.ConnectionString(t.Context(), "sslmode=disable")
 	if err != nil {
 		t.Fatalf("failed to get container host: %s", err)
 	}
 
-	conn, err := pgxpool.New(ctx, connStr)
-	if err != nil {
-		t.Fatalf("unable to initialize db connection: %v", err)
-	}
-
-	// Pings the DB with retry mechanism.
-	var pingErr error
-	for range 5 {
-		pingErr = conn.Ping(ctx)
-		if pingErr != nil {
-			time.Sleep(time.Second)
-			continue
-		}
-	}
-	if pingErr != nil {
-		t.Fatalf("unable to ping the DB: %v", pingErr)
-	}
-
-	_, err = conn.Exec(ctx, seed)
-	if err != nil {
-		t.Fatalf("unable to seed DB: %v", err)
-	}
-
-	return conn, func() {
-		conn.Close()
+	return connStr, func() {
 		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
 			t.Errorf("failed to terminate container: %s", err)
 		}
+	}
+}
+
+func NewTestDB(t testing.TB) (*pgxpool.Pool, func()) {
+	connStr, containerCloser := NewTestContainer(t)
+	pool, err := pgxpool.New(t.Context(), connStr)
+	if err != nil {
+		t.Fatalf("creating db conn: %v", err)
+	}
+
+	return pool, func() {
+		defer pool.Close()
+		defer containerCloser()
 	}
 }
 
@@ -92,5 +54,6 @@ func fetchMigrationFiles(t testing.TB) []string {
 	if err != nil {
 		t.Fatalf("unable to read sql files: %v", err)
 	}
+	files = append(files, "../db/seed.sql")
 	return files
 }
