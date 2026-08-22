@@ -157,16 +157,10 @@ func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetAndUpdateQueryParams
 	return o, uat, nil
 }
 
-func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
-	logAttr := []any{slog.Int64("queryID", qID), slog.String("scraper", scraperName)}
+func (j *Jobber) runQuery(ctx context.Context, qID int64, s scrape.Scraper) {
+	logAttr := []any{slog.Int64("queryID", qID), slog.String("scraper", s.Name())}
 
-	s, ok := j.scrList[scraperName]
-	if !ok {
-		j.logger.Error("unable to find scraper in jobber.runQuery", logAttr...)
-		return
-	}
-
-	q, err := j.db.GetQueryScraper(ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: scraperName})
+	q, err := j.db.GetQueryScraper(ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: s.Name()})
 	if err != nil {
 		j.logger.Error("unable to get query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		return
@@ -194,7 +188,7 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 	}
 	if metrics.Enabled {
 		metrics.ScraperJob.WithLabelValues(
-			scraperName,
+			s.Name(),
 			q.Keywords,
 			q.Location,
 			strconv.Itoa(len(offers)),
@@ -214,7 +208,7 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 				j.logger.Error("unable to create query offer association in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 			}
 		}
-		if err := j.db.UpdateQueryScrapedAt(ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: scraperName}); err != nil {
+		if err := j.db.UpdateQueryScrapedAt(ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: s.Name()}); err != nil {
 			j.logger.Error("unable to update scraper timestamp in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 	}
@@ -235,8 +229,8 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	// jobs firing after the query has already been deleted.
 	var stagger int
 
-	for name := range j.scrList {
-		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, name)}
+	for _, s := range j.scrList {
+		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, s.Name())}
 		opts = append(opts, o...)
 
 		minute := q.CreatedAt.Time.Minute() + stagger
@@ -249,19 +243,19 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 
 		job, err := j.sched.NewJob(
 			gocron.CronJob(cron, false),
-			gocron.NewTask(func(q int64) { j.runQuery(j.ctx, q, name) }, q.ID),
+			gocron.NewTask(func(q int64) { j.runQuery(j.ctx, q, s) }, q.ID),
 			opts...,
 		)
 		if err != nil {
 			j.logger.Error("unable to schedule query in jobber.scheduleQuery",
 				slog.Int64("queryID", q.ID),
-				slog.String("scraper", name),
+				slog.String("scraper", s.Name()),
 				slog.String("error", err.Error()),
 			)
 			continue
 		}
 		if metrics.Enabled {
-			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+name, cron).Inc()
+			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+s.Name(), cron).Inc()
 		}
 		j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 	}

@@ -17,31 +17,38 @@ import (
 // Scraper defines the interface expected from all the scrapers.
 type Scraper interface {
 	Scrape(context.Context, *db.GetQueryScraperRow) ([]db.CreateOfferParams, error)
+	Name() string
 }
 
 // List links the name of the scraper to its implementation.
-type List map[string]Scraper
+type List []Scraper
 
 // New returns a list of all available scrapers.
 func New() List {
 	return List{
-		stepstone.Name: stepstone.New(),
-		linkedin.Name:  linkedin.New(),
-		glassdoor.Name: glassdoor.New(),
+		stepstone.New(),
+		linkedin.New(),
+		glassdoor.New(),
 	}
 }
 
 var (
-	Mock          = &mock{}
-	MockWithErr   = &mock{mockErr: fmt.Errorf("error")}
-	MockWithDelay = &mock{delay: 150 * time.Millisecond}
-	MockList      = List{"Mock": Mock}
+	Mock          = &mock{name: "Mock"}
+	Mock2         = &mock{name: "Mock2"}
+	MockWithErr   = &mock{name: "mockErr", mockErr: fmt.Errorf("error")}
+	MockWithDelay = &mock{name: "mockDelay", delay: 150 * time.Millisecond}
+	MockList      = List{Mock}
 )
 
 type mock struct {
+	name      string
 	LastQuery *db.GetQueryScraperRow
 	mockErr   error
 	delay     time.Duration
+}
+
+func (m *mock) Name() string {
+	return "Mock"
 }
 
 func (m *mock) Scrape(_ context.Context, q *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
