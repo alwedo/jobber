@@ -2,7 +2,7 @@ package stepstone
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -172,7 +172,7 @@ func (s *stepstone) fetchOffers(ctx context.Context, query *db.GetQueryScraperRo
 	}
 
 	r := &response{}
-	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+	if err := json.UnmarshalRead(resp.Body, r); err != nil {
 		return nil, fmt.Errorf("failed to decode response body in stepstone.fetchOffers: %w", err)
 	}
 

@@ -3,7 +3,7 @@ package glassdoor
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -190,7 +190,7 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 	}
 
 	var r = &response{}
-	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+	if err := json.UnmarshalRead(resp.Body, r, json.MatchCaseInsensitiveNames(true)); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal response in glassdoor.fetchOffers: %w", err)
 	}
 
@@ -271,7 +271,7 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 	}
 
 	var l = []location{}
-	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {
+	if err := json.UnmarshalRead(resp.Body, &l); err != nil {
 		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %w", err)
 	}
 
