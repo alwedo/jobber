@@ -39,3 +39,19 @@ This will create only the DB container and run the server without building it.
 - Start developer mode with `make run`
 
 Once up, try `http://localhost` for your local dev version of jobber.
+
+### Options
+
+The server can be configured with the following environment variable and command-line options:
+
+- `DB_CONN` sets the PostgreSQL connection string. The `make run` and `make build` commands use the local database connection from the `Makefile` by default.
+- `-port` sets the address and port where the server listens. Defaults to `:80`.
+- `-metrics` enables the `/metrics` endpoint and Prometheus metrics middleware. Disabled by default.
+- `-mock` uses the mock scraper instead of the Live scrapers. This is intended for testing.
+- `-mockTimeout` sets the query creation timeout to one nanosecond. This is intended for testing.
+
+For example, to run the server on port 8080 with metrics enabled:
+
+```sh
+DB_CONN="postgres://user:password@localhost:5432/jobber?sslmode=disable" go run main.go -port=:8080 -metrics
+```
