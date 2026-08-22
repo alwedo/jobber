@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	Name = "LinkedIn"
+	name = "LinkedIn"
 
 	linkedInURL      = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 	linkedInBaseURL  = "https://www.linkedin.com/jobs/view/" // Direct link to job posting
@@ -36,6 +36,10 @@ type linkedIn struct {
 
 func New() *linkedIn { //nolint: revive
 	return &linkedIn{client: retryhttp.New()}
+}
+
+func (l *linkedIn) Name() string {
+	return name
 }
 
 // search runs a linkedin search based on a query.
@@ -132,7 +136,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 	doc.Find("li").Each(func(_ int, s *goquery.Selection) {
 		// Check if this li contains a job card
 		if s.Find(".base-search-card").Length() > 0 {
-			job := db.CreateOfferParams{Source: Name}
+			job := db.CreateOfferParams{Source: name}
 
 			// Extract Job ID from data-entity-urn
 			if urn, exists := s.Find("[data-entity-urn]").Attr("data-entity-urn"); exists {

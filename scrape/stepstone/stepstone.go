@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Name = "Stepstone"
+	name = "Stepstone"
 
 	stepstoneBaseURL = "https://www.stepstone.de"
 	// stepstonePublicAPIEndpoint accepts POST request with the requestBody below.
@@ -76,6 +76,10 @@ func New() *stepstone { //nolint: revive
 	}
 }
 
+func (s *stepstone) Name() string {
+	return name
+}
+
 func (s *stepstone) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	var totalOffers []db.CreateOfferParams
 	var totalCount int
@@ -100,7 +104,7 @@ func (s *stepstone) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([
 				Location:    v.Location,
 				PostedAt:    v.DatePosted,
 				Description: v.TextSnippet,
-				Source:      Name,
+				Source:      name,
 				Url:         stepstoneBaseURL + v.URL,
 			})
 		}

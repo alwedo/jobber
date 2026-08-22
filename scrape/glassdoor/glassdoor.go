@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	Name = "Glassdoor"
+	name = "Glassdoor"
 
 	baseURL                       = "https://www.glassdoor.de"
 	locationEndpoint              = "/autocomplete/location"
@@ -110,6 +110,10 @@ func New() *glassdoor { //nolint: revive
 	}
 }
 
+func (g *glassdoor) Name() string {
+	return name
+}
+
 func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	offers := []db.CreateOfferParams{}
 
@@ -144,7 +148,7 @@ scrape:
 				Company:     o.JobView.Header.EmployerNameFromSearch,
 				Location:    o.JobView.Header.LocationName,
 				Description: strings.Join(o.JobView.Job.DescriptionFragmentsText, " "),
-				Source:      Name,
+				Source:      name,
 				Url:         o.JobView.Header.SEOJobLink,
 			})
 		}

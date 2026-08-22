@@ -52,8 +52,8 @@ func TestCreateQuery(t *testing.T) {
 	defer closer()
 	d := db.New(pool)
 	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{
-		"mock":  scrape.Mock,
-		"mock2": scrape.Mock,
+		scrape.Mock,
+		scrape.Mock2,
 	}))
 	defer jCloser()
 
@@ -115,9 +115,9 @@ func TestCreateWithTimeOut(t *testing.T) {
 	defer closer()
 	d := db.New(pool)
 	sl := scrape.List{
-		"mock":  scrape.MockWithDelay,
-		"mock2": scrape.Mock,
-		"mock3": scrape.MockWithErr,
+		scrape.MockWithDelay,
+		scrape.Mock,
+		scrape.MockWithErr,
 	}
 	j, jCloser := New(t.Context(), l, d, WithScrapeList(sl), WithTimeOut(time.Nanosecond))
 	defer jCloser()
@@ -206,22 +206,21 @@ func TestRunQuery(t *testing.T) {
 	pool, closer := db.NewTestDB(t)
 	defer closer()
 	d := db.New(pool)
-	mockScraperName := "Mock"
-	mockScraper := scrape.Mock
-	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{mockScraperName: mockScraper}))
+	s := scrape.Mock
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{s}))
 	defer jCloser()
 
 	t.Run("with valid query", func(t *testing.T) {
 		qID := int64(3) // ID 3 is golang-berlin
-		q, err := d.GetQueryScraper(t.Context(), &db.GetQueryScraperParams{ID: qID, ScraperName: mockScraperName})
+		q, err := d.GetQueryScraper(t.Context(), &db.GetQueryScraperParams{ID: qID, ScraperName: s.Name()})
 		if err != nil {
 			t.Errorf("unable to retrieve seed query: %v", err)
 		}
-		j.runQuery(t.Context(), q.ID, mockScraperName)
+		j.runQuery(t.Context(), q.ID, s)
 
 		t.Run("it calls the scraper", func(t *testing.T) {
-			if *mockScraper.LastQuery != *q {
-				t.Errorf("wanted ran query to be %v, got %v", q, mockScraper.LastQuery)
+			if *s.LastQuery != *q {
+				t.Errorf("wanted ran query to be %v, got %v", q, s.LastQuery)
 			}
 		})
 		t.Run("it updates the UpdatedAt field used for removing old queries", func(t *testing.T) {
@@ -243,7 +242,7 @@ func TestRunQuery(t *testing.T) {
 			t.Errorf("scanning rows %v", err)
 		}
 
-		j.runQuery(t.Context(), sq.ID, mockScraperName)
+		j.runQuery(t.Context(), sq.ID, s)
 		q, err := d.GetAndUpdateQuery(t.Context(), &db.GetAndUpdateQueryParams{Keywords: "python", Location: "san francisco"})
 		if !errors.Is(err, sql.ErrNoRows) {
 			t.Errorf("expected sql.ErrNoRows after deletion, got: %v (q=%v)", err, q)
