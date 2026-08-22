@@ -12,7 +12,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alwedo/jobber/db"
-	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -43,7 +42,6 @@ func New() *linkedIn { //nolint: revive
 // It will paginate over the search results until it doesn't find any more offers,
 // Scrape the data and return a slice of offers ready to be added to the DB.
 func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
-	t := time.Now()
 	var totalOffers []db.CreateOfferParams
 	var offers []db.CreateOfferParams
 
@@ -70,12 +68,6 @@ func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]
 			break
 		}
 	}
-	metrics.ScraperJob.WithLabelValues(
-		Name,
-		query.Keywords,
-		query.Location,
-		strconv.Itoa(len(totalOffers)),
-	).Observe(time.Since(t).Seconds())
 
 	return totalOffers, nil
 }
