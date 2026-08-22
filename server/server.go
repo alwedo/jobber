@@ -1,21 +1,29 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alwedo/jobber/assets"
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/jobber"
 	"github.com/alwedo/jobber/metrics"
+	"github.com/alwedo/jobber/scrape"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -29,26 +37,88 @@ const (
 var isValidKeywords = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
 var isValidLocation = regexp.MustCompile(`^[A-Za-z ]+$`)
 
-func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
+func Start(ctx context.Context, w io.Writer, getenv func(string) string, args []string) error {
+	fs := flag.NewFlagSet("server", flag.ExitOnError)
+	var hasMock bool
+	fs.BoolVar(&hasMock, "mock", false, "") // Sets the scraper to a mock. Used for testing.
+	var hasMockTimeout bool
+	fs.BoolVar(&hasMockTimeout, "mockTimeout", false, "") // Sets the scraper mock timeout. Used for testing.
+	var hasMetrics bool
+	fs.BoolVar(&hasMetrics, "metrics", false, "") // Enables the /metrics endpoint.
+	var port string
+	fs.StringVar(&port, "port", ":80", "") // Sets the server port. Default port is 80.
+	if err := fs.Parse(args[1:]); err != nil {
+		return fmt.Errorf("parsing command lines: %w", err)
+	}
+
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	l := slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	conn, err := pgxpool.New(ctx, getenv("DB_CONN"))
+	if err != nil {
+		return fmt.Errorf("unable to initialize db connection: %w", err)
+	}
+	defer conn.Close()
+	if err := conn.Ping(ctx); err != nil {
+		return fmt.Errorf("unable to ping database: %w", err)
+	}
+
 	r, err := newHTMLRenderer(assets.HTMLFiles, "base.tmpl", "xmlfeed.tmpl", "partials/*.tmpl")
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse templates: %w", err)
+		return fmt.Errorf("unable to parse templates: %w", err)
 	}
+
+	var jbrOpts []jobber.Options
+	if hasMock {
+		jbrOpts = append(jbrOpts, jobber.WithScrapeList(scrape.MockList))
+	}
+	if hasMockTimeout {
+		jbrOpts = append(jbrOpts, jobber.WithTimeOut(time.Nanosecond))
+	}
+	j, jCloser := jobber.New(ctx, l, db.New(conn), jbrOpts...)
+	defer jCloser()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /feeds", feed(l, r, j))
 	mux.HandleFunc("POST /feeds", create(l, r, j))
-	mux.Handle("GET /metrics", promhttp.Handler())
 	mux.HandleFunc("GET /help", help(l, r))
 	mux.HandleFunc("GET /", index(l, r))
 	mux.Handle("GET /static/", staticHeadersMiddleware(http.StripPrefix("/static", http.FileServerFS(assets.StaticFiles))))
 	mux.HandleFunc("GET /healthz", func(_ http.ResponseWriter, _ *http.Request) {})
 
-	return &http.Server{
-		Addr:              ":80",
-		Handler:           metrics.HTTPMiddleware(mux),
+	var handler http.Handler = mux
+	if hasMetrics {
+		mux.Handle("GET /metrics", promhttp.Handler())
+		metrics.Init()
+		handler = metrics.HTTPMiddleware(handler)
+	}
+	httpServer := &http.Server{
+		Addr:              port,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
-	}, nil
+	}
+
+	srvErr := make(chan error, 1)
+	go func() {
+		l.Info("listening on", slog.String("address", httpServer.Addr))
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			srvErr <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(ctx); err != nil {
+			return fmt.Errorf("error shutting down http server: %w", err)
+		}
+	case err := <-srvErr:
+		return fmt.Errorf("error in ListenAndServe: %w", err)
+	}
+
+	return nil
 }
 
 func index(log *slog.Logger, h *htmlRenderer) http.HandlerFunc {

@@ -1,15 +1,14 @@
-
-POSTGRES_PASSWORD ?= password
+DB_CONN ?= postgres://jobber:password@localhost:5432/jobber?sslmode=disable
 
 # https://github.com/golang-migrate/migrate/blob/master/database/postgres/TUTORIAL.md
 .PHONY: migrate-up
 migrate-up:
-	@result=$$(migrate -database postgres://jobber:$(POSTGRES_PASSWORD)@localhost:5432/jobber?sslmode=disable -path db/migrations up 2>&1); \
+	@result=$$(migrate -database $(DB_CONN) -path db/migrations up 2>&1); \
 	echo "Migrating DB: $$result"
 
 .PHONY: migrate-down
 migrate-down:
-	@migrate -database postgres://jobber:$(POSTGRES_PASSWORD)@localhost:5432/jobber?sslmode=disable -path db/migrations down 1
+	@migrate -database $(DB_CONN) -path db/migrations down 1
 
 .PHONY: check
 check: lint test
@@ -24,7 +23,7 @@ lint:
 
 .PHONY: build
 build: migrate-up
-	POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) docker compose up -d --build
+	DB_CONN=$(DB_CONN) docker compose up -d --build
 
 .PHONY: db-up
 db-up:
@@ -35,7 +34,7 @@ db-up:
 			docker run --name jobber-postgres-dev \
 				-e POSTGRES_DB=jobber \
 				-e POSTGRES_USER=jobber \
-				-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
+				-e POSTGRES_PASSWORD=password \
 				-p 5432:5432 \
 				-v $(PWD)/postgres-data:/var/lib/postgresql \
 				--health-cmd="pg_isready -U jobber -d jobber" \
@@ -60,8 +59,8 @@ db-up:
 
 .PHONY: run
 run: db-up mod migrate-up
-	@echo "Starting server..."
-	@POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) go run main.go; \
+	@echo "Starting dev server..."
+	@DB_CONN=$(DB_CONN) go run main.go; \
 	exit 0
 
 .PHONY: mod
