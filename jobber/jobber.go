@@ -108,7 +108,9 @@ func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) err
 		slog.String("keywords", keywords),
 		slog.String("location", location),
 	)
-	metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
+	if metrics.Enabled {
+		metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
+	}
 
 	done := make(chan struct{})
 	var tasks atomic.Int64
@@ -177,20 +179,26 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 			j.logger.Error("unable to delete query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 		j.sched.RemoveByTags(q.Keywords + q.Location)
-		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Sub(float64(len(j.scrList)))
+		if metrics.Enabled {
+			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Sub(float64(len(j.scrList)))
+		}
 
 		j.logger.Info("deleting unused query", logAttr...)
 		return
 	}
 
+	t := time.Now()
 	offers, err := s.Scrape(ctx, q)
 	if err != nil {
 		j.logger.Error("scrape in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
-		// We only return after an error if there are no offers since
-		// some cases (ie, too many requests) will have partial results.
-		if len(offers) == 0 {
-			return
-		}
+	}
+	if metrics.Enabled {
+		metrics.ScraperJob.WithLabelValues(
+			scraperName,
+			q.Keywords,
+			q.Location,
+			strconv.Itoa(len(offers)),
+		).Observe(time.Since(t).Seconds())
 	}
 
 	if len(offers) > 0 {
@@ -252,8 +260,9 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 			)
 			continue
 		}
-
-		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+name, cron).Inc()
+		if metrics.Enabled {
+			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+name, cron).Inc()
+		}
 		j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 	}
 }

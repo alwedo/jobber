@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var Enabled bool
+
 // Metrics collection
 var (
 	httpRequests = prometheus.NewHistogramVec(
