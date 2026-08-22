@@ -67,6 +67,7 @@ var (
 )
 
 func Init() {
+	Enabled = true
 	prometheus.MustRegister(
 		httpRequests,
 		httpRequestsTotal,
