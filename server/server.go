@@ -213,7 +213,7 @@ func feed(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc 
 			// If the calculated value is more than one hour we don't retun the
 			// header since we can't guarantee when the next update will be.
 			t := time.Hour - time.Since(updatedAt.Time)
-			w.Header().Add("Cache-Control", "max-age="+strconv.Itoa(int(t.Seconds())))
+			w.Header().Set("Cache-Control", "max-age="+strconv.FormatInt(int64(t/time.Second), 10))
 		}
 
 		// Set template and Content-Type header based on Accept header.
