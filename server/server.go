@@ -83,7 +83,7 @@ func Start(ctx context.Context, w io.Writer, getenv func(string) string, args []
 	mux.HandleFunc("GET /feeds", feed(l, r, j))
 	mux.HandleFunc("POST /feeds", create(l, r, j))
 	mux.HandleFunc("GET /help", help(l, r))
-	mux.HandleFunc("GET /", index(l, r))
+	mux.HandleFunc("GET /{$}", index(l, r))
 	mux.Handle("GET /static/", staticHeadersMiddleware(http.StripPrefix("/static", http.FileServerFS(assets.StaticFiles))))
 	mux.HandleFunc("GET /healthz", func(_ http.ResponseWriter, _ *http.Request) {})
 
@@ -122,11 +122,7 @@ func Start(ctx context.Context, w io.Writer, getenv func(string) string, args []
 }
 
 func index(log *slog.Logger, h *htmlRenderer) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
+	return func(w http.ResponseWriter, _ *http.Request) {
 		if err := h.render(w, nil, "base", "pages/home.tmpl"); err != nil {
 			internalError(w, log, "failed to execute template in server.index", err)
 		}
