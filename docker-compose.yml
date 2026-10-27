@@ -23,8 +23,7 @@ services:
     build: .
     container_name: jobber
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_HOST: postgres
+      DB_CONN: "postgres://jobber:${POSTGRES_PASSWORD}@postgres:5432/jobber?sslmode=disable"
     ports:
       - "80:80"
     restart: unless-stopped
