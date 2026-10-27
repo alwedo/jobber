@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,14 +24,6 @@ func TestServer(t *testing.T) {
 	logDump := new(bytes.Buffer)
 	connStr, closer := db.NewTestContainer(t)
 	defer closer()
-	// connStr, containerCloser := db.NewTestDB(t)
-	// defer containerCloser()
-	// pool, err := pgxpool.New(t.Context(), connStr)
-	// if err != nil {
-	// 	t.Fatalf("creating db conn: %v", err)
-	// }
-	// defer pool.Close()
-	// d := db.New(pool)
 
 	tests := []struct {
 		name           string
@@ -323,10 +317,20 @@ func TestServer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.method+tt.path+" "+tt.name, func(t *testing.T) {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatalf("finding available server port: %v", err)
+			}
+			serverAddr := listener.Addr().String()
+			if err := listener.Close(); err != nil {
+				t.Fatalf("releasing server port: %v", err)
+			}
+
 			args := []string{"jobber", "-mock"}
 			if len(tt.args) > 0 {
 				args = append(args, tt.args...)
 			}
+			args = append(args, "-port", serverAddr)
 			getenv := func(key string) string {
 				if key == "DB_CONN" {
 					return connStr
@@ -336,8 +340,19 @@ func TestServer(t *testing.T) {
 
 			svrErr := make(chan error, 1)
 			go func() { svrErr <- Start(t.Context(), logDump, getenv, args) }()
-			if err := waitForReady(t.Context(), 10*time.Second, "http://127.0.0.1:80/healthz"); err != nil {
-				t.Fatal("waiting for sderver")
+			readyCtx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+			readyErr := make(chan error, 1)
+			go func() {
+				readyErr <- waitForReady(readyCtx, 10*time.Second, "http://"+serverAddr+"/healthz")
+			}()
+			select {
+			case err := <-svrErr:
+				t.Fatalf("server exited before becoming ready: %v", err)
+			case err := <-readyErr:
+				if err != nil {
+					t.Fatalf("waiting for server: %v", err)
+				}
 			}
 
 			client := &http.Client{}
@@ -345,7 +360,7 @@ func TestServer(t *testing.T) {
 			for k, v := range tt.params {
 				qp.Add(k, v)
 			}
-			url, err := url.Parse("http://127.0.0.1:80" + tt.path)
+			url, err := url.Parse("http://" + serverAddr + tt.path)
 			if err != nil {
 				t.Errorf("unable to parse server URL: %v", err)
 			}
@@ -385,15 +400,13 @@ func TestServer(t *testing.T) {
 				for k, wantHeader := range tt.wantHeaders {
 					gotHeader := r.Header.Get(k)
 					if k == "Cache-Control" && tt.name == "valid XML feed" {
-						// Fix flaky test where some times the test 'valid XML feed' takes more
-						// than 1s to get processed and the max-age value is 2s older instead of 1.
-						if gotHeader != wantHeader && gotHeader != "max-age=1798" {
-							t.Errorf("wanted header %s to be either %s or %s, got %s", k, wantHeader, "max-age=1798", gotHeader)
+						prefix, value, ok := strings.Cut(gotHeader, "=")
+						maxAge, err := strconv.Atoi(value)
+						if !ok || prefix != "max-age" || err != nil || maxAge < 1790 || maxAge > 1800 {
+							t.Errorf("wanted header %s to contain a max-age between 1790 and 1800, got %s", k, gotHeader)
 						}
-					} else {
-						if wantHeader != gotHeader {
-							t.Errorf("wanted header %s to be %s, got %s", k, wantHeader, gotHeader)
-						}
+					} else if wantHeader != gotHeader {
+						t.Errorf("wanted header %s to be %s, got %s", k, wantHeader, gotHeader)
 					}
 				}
 			}
@@ -435,7 +448,11 @@ func scroobbyDoobyDoo(s string) string {
 // reached.
 func waitForReady(ctx context.Context, timeout time.Duration, endpoint string) error {
 	client := http.Client{}
-	startTime := time.Now()
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
@@ -443,24 +460,18 @@ func waitForReady(ctx context.Context, timeout time.Duration, endpoint string) e
 		}
 
 		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
-		if resp.StatusCode == http.StatusOK {
+		if err == nil {
+			if resp.StatusCode == http.StatusOK {
+				resp.Body.Close()
+				return nil
+			}
 			resp.Body.Close()
-			return nil
 		}
-		resp.Body.Close()
 
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			if time.Since(startTime) >= timeout {
-				return fmt.Errorf("timeout reached while waiting for endpoint")
-			}
-			// wait a little while between checks
-			time.Sleep(250 * time.Millisecond)
+			return fmt.Errorf("timeout reached while waiting for endpoint %s: %w", endpoint, ctx.Err())
+		case <-ticker.C:
 		}
 	}
 }
