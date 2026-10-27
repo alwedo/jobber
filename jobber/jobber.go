@@ -181,18 +181,9 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, s scrape.Scraper) {
 		return
 	}
 
-	t := time.Now()
 	offers, err := s.Scrape(ctx, q)
 	if err != nil {
 		j.logger.Error("scrape in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
-	}
-	if metrics.Enabled {
-		metrics.ScraperJob.WithLabelValues(
-			s.Name(),
-			q.Keywords,
-			q.Location,
-			strconv.Itoa(len(offers)),
-		).Observe(time.Since(t).Seconds())
 	}
 
 	if len(offers) > 0 {
