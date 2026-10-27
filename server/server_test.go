@@ -1,11 +1,13 @@
 package server
 
 import (
+	"bytes"
+	"context"
+	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -13,14 +15,21 @@ import (
 
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/jobber"
-	"github.com/alwedo/jobber/scrape"
 	approvals "github.com/approvals/go-approval-tests"
 )
 
 func TestServer(t *testing.T) {
-	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
-	defer dbCloser()
+	logDump := new(bytes.Buffer)
+	connStr, closer := db.NewTestContainer(t)
+	defer closer()
+	// connStr, containerCloser := db.NewTestDB(t)
+	// defer containerCloser()
+	// pool, err := pgxpool.New(t.Context(), connStr)
+	// if err != nil {
+	// 	t.Fatalf("creating db conn: %v", err)
+	// }
+	// defer pool.Close()
+	// d := db.New(pool)
 
 	tests := []struct {
 		name           string
@@ -28,10 +37,12 @@ func TestServer(t *testing.T) {
 		method         string
 		params         map[string]string
 		headers        map[string]string
+		args           []string
 		wantStatus     int
 		wantHeaders    map[string]string
 		wantBodyAssert string // takes the extension of the file you want to assert, ie. "html" or "xml"
 		wantBodyString string
+		wantBodyFn     func(testing.TB) string
 		jobberOpts     []jobber.Options
 	}{
 		{
@@ -53,6 +64,7 @@ func TestServer(t *testing.T) {
 				queryParamKeywords: "fluffy dogs",
 				queryParamLocation: "berlin",
 			},
+			args:           []string{"-mockTimeout"},
 			wantStatus:     http.StatusOK,
 			jobberOpts:     []jobber.Options{jobber.WithTimeOut(time.Nanosecond)},
 			wantBodyAssert: "html",
@@ -236,7 +248,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			name:       "static endpoint style.css",
-			path:       "/static/style.v.1.0.0.css",
+			path:       "/static/css/style.css",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
 			wantHeaders: map[string]string{
@@ -244,14 +256,17 @@ func TestServer(t *testing.T) {
 				"Cache-Control":          "public, max-age=31536000, immutable",
 				"X-Content-Type-Options": "nosniff",
 			},
-			wantBodyString: func() string {
-				f, _ := assets.ReadFile(assetStyle) //nolint: errcheck
+			wantBodyFn: func(t testing.TB) string {
+				f, err := os.ReadFile("../assets/static/css/style.css")
+				if err != nil {
+					t.Fatalf("opening file: %v", err)
+				}
 				return string(f)
-			}(),
+			},
 		},
 		{
 			name:       "static endpoint script.js",
-			path:       "/static/script.v.1.0.0.js",
+			path:       "/static/js/script.js",
 			method:     http.MethodGet,
 			wantStatus: http.StatusOK,
 			wantHeaders: map[string]string{
@@ -259,10 +274,31 @@ func TestServer(t *testing.T) {
 				"Cache-Control":          "public, max-age=31536000, immutable",
 				"X-Content-Type-Options": "nosniff",
 			},
-			wantBodyString: func() string {
-				f, _ := assets.ReadFile(assetScript) //nolint: errcheck
+			wantBodyFn: func(t testing.TB) string {
+				f, err := os.ReadFile("../assets/static/js/script.js")
+				if err != nil {
+					t.Fatalf("opening file: %v", err)
+				}
 				return string(f)
-			}(),
+			},
+		},
+		{
+			name:       "static endpoint htmx",
+			path:       "/static/js/htmx.min.js",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+			wantHeaders: map[string]string{
+				"Content-Type":           "application/javascript",
+				"Cache-Control":          "public, max-age=31536000, immutable",
+				"X-Content-Type-Options": "nosniff",
+			},
+			wantBodyFn: func(t testing.TB) string {
+				f, err := os.ReadFile("../assets/static/js/htmx.min.js")
+				if err != nil {
+					t.Fatalf("opening file: %v", err)
+				}
+				return string(f)
+			},
 		},
 		{
 			name:           "static endpoint notfound",
@@ -277,25 +313,39 @@ func TestServer(t *testing.T) {
 			method:     http.MethodPost,
 			wantStatus: http.StatusMethodNotAllowed,
 		},
+		{
+			name:       "ping healthz returns ok",
+			path:       "/healthz",
+			method:     http.MethodGet,
+			wantStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.method+tt.path+" "+tt.name, func(t *testing.T) {
-			tt.jobberOpts = append(tt.jobberOpts, jobber.WithScrapeList(scrape.MockList))
-			j, jCloser := jobber.New(t.Context(), l, d, tt.jobberOpts...)
-			defer jCloser()
-			svr, err := New(l, j)
-			if err != nil {
-				t.Fatal(err)
+			args := []string{"jobber", "-mock"}
+			if len(tt.args) > 0 {
+				args = append(args, tt.args...)
 			}
-			client := http.DefaultClient
-			server := httptest.NewServer(svr.Handler)
-			defer server.Close()
+			getenv := func(key string) string {
+				if key == "DB_CONN" {
+					return connStr
+				}
+				return ""
+			}
+
+			svrErr := make(chan error, 1)
+			go func() { svrErr <- Start(t.Context(), logDump, getenv, args) }()
+			if err := waitForReady(t.Context(), 10*time.Second, "http://127.0.0.1:80/healthz"); err != nil {
+				t.Fatal("waiting for sderver")
+			}
+
+			client := &http.Client{}
 			qp := url.Values{}
 			for k, v := range tt.params {
 				qp.Add(k, v)
 			}
-			url, err := url.Parse(server.URL + tt.path)
+			url, err := url.Parse("http://127.0.0.1:80" + tt.path)
 			if err != nil {
 				t.Errorf("unable to parse server URL: %v", err)
 			}
@@ -360,6 +410,12 @@ func TestServer(t *testing.T) {
 			if tt.wantBodyString != "" && tt.wantBodyString != string(respBody) {
 				t.Errorf("wanted body string '%s', got '%s'", tt.wantBodyString, string(respBody))
 			}
+			if tt.wantBodyFn != nil {
+				wantBody := tt.wantBodyFn(t)
+				if wantBody != string(respBody) {
+					t.Errorf("wanted body func '%s', got '%s'", wantBody, string(respBody))
+				}
+			}
 		})
 	}
 }
@@ -372,4 +428,39 @@ func scroobbyDoobyDoo(s string) string {
 	s = regexp.MustCompile(`<b>Posted</b>:\s*[A-Za-z]{3}\s+\d{1,2}<br>`).ReplaceAllString(s, `<b>Posted</b>: DATE_SCRUBBED<br>`)
 	s = regexp.MustCompile(`127\.0\.0\.1:\d+`).ReplaceAllString(s, `127.0.0.1:PORT_SCRUBBED`)
 	return s
+}
+
+// waitForReady calls the specified endpoint until it gets a 200
+// response or until the context is cancelled or the timeout is
+// reached.
+func waitForReady(ctx context.Context, timeout time.Duration, endpoint string) error {
+	client := http.Client{}
+	startTime := time.Now()
+	for {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+		if resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			return nil
+		}
+		resp.Body.Close()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if time.Since(startTime) >= timeout {
+				return fmt.Errorf("timeout reached while waiting for endpoint")
+			}
+			// wait a little while between checks
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
 }

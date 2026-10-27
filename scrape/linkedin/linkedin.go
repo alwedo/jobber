@@ -12,13 +12,12 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alwedo/jobber/db"
-	"github.com/alwedo/jobber/metrics"
 	"github.com/alwedo/jobber/scrape/retryhttp"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
-	Name = "LinkedIn"
+	name = "LinkedIn"
 
 	linkedInURL      = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 	linkedInBaseURL  = "https://www.linkedin.com/jobs/view/" // Direct link to job posting
@@ -39,11 +38,14 @@ func New() *linkedIn { //nolint: revive
 	return &linkedIn{client: retryhttp.New()}
 }
 
+func (l *linkedIn) Name() string {
+	return name
+}
+
 // search runs a linkedin search based on a query.
 // It will paginate over the search results until it doesn't find any more offers,
 // Scrape the data and return a slice of offers ready to be added to the DB.
 func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
-	t := time.Now()
 	var totalOffers []db.CreateOfferParams
 	var offers []db.CreateOfferParams
 
@@ -70,12 +72,6 @@ func (l *linkedIn) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]
 			break
 		}
 	}
-	metrics.ScraperJob.WithLabelValues(
-		Name,
-		query.Keywords,
-		query.Location,
-		strconv.Itoa(len(totalOffers)),
-	).Observe(time.Since(t).Seconds())
 
 	return totalOffers, nil
 }
@@ -140,7 +136,7 @@ func (l *linkedIn) parseLinkedInBody(body io.ReadCloser) ([]db.CreateOfferParams
 	doc.Find("li").Each(func(_ int, s *goquery.Selection) {
 		// Check if this li contains a job card
 		if s.Find(".base-search-card").Length() > 0 {
-			job := db.CreateOfferParams{Source: Name}
+			job := db.CreateOfferParams{Source: name}
 
 			// Extract Job ID from data-entity-urn
 			if urn, exists := s.Find("[data-entity-urn]").Attr("data-entity-urn"); exists {

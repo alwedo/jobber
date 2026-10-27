@@ -3,7 +3,7 @@ package glassdoor
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	Name = "Glassdoor"
+	name = "Glassdoor"
 
 	baseURL                       = "https://www.glassdoor.de"
 	locationEndpoint              = "/autocomplete/location"
@@ -110,6 +110,10 @@ func New() *glassdoor { //nolint: revive
 	}
 }
 
+func (g *glassdoor) Name() string {
+	return name
+}
+
 func (g *glassdoor) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	offers := []db.CreateOfferParams{}
 
@@ -144,7 +148,7 @@ scrape:
 				Company:     o.JobView.Header.EmployerNameFromSearch,
 				Location:    o.JobView.Header.LocationName,
 				Description: strings.Join(o.JobView.Job.DescriptionFragmentsText, " "),
-				Source:      Name,
+				Source:      name,
 				Url:         o.JobView.Header.SEOJobLink,
 			})
 		}
@@ -190,7 +194,7 @@ func (g *glassdoor) fetchOffers(ctx context.Context, rb *requestBody) (*response
 	}
 
 	var r = &response{}
-	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+	if err := json.UnmarshalRead(resp.Body, r, json.MatchCaseInsensitiveNames(true)); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal response in glassdoor.fetchOffers: %w", err)
 	}
 
@@ -271,7 +275,7 @@ func (g *glassdoor) fetchLocation(ctx context.Context, loc string) (*location, e
 	}
 
 	var l = []location{}
-	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {
+	if err := json.UnmarshalRead(resp.Body, &l); err != nil {
 		return nil, fmt.Errorf("unable to decode http response body in glassdoor.fetchLocation: %w", err)
 	}
 

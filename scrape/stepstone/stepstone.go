@@ -2,7 +2,7 @@ package stepstone
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Name = "Stepstone"
+	name = "Stepstone"
 
 	stepstoneBaseURL = "https://www.stepstone.de"
 	// stepstonePublicAPIEndpoint accepts POST request with the requestBody below.
@@ -76,6 +76,10 @@ func New() *stepstone { //nolint: revive
 	}
 }
 
+func (s *stepstone) Name() string {
+	return name
+}
+
 func (s *stepstone) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([]db.CreateOfferParams, error) {
 	var totalOffers []db.CreateOfferParams
 	var totalCount int
@@ -100,7 +104,7 @@ func (s *stepstone) Scrape(ctx context.Context, query *db.GetQueryScraperRow) ([
 				Location:    v.Location,
 				PostedAt:    v.DatePosted,
 				Description: v.TextSnippet,
-				Source:      Name,
+				Source:      name,
 				Url:         stepstoneBaseURL + v.URL,
 			})
 		}
@@ -172,7 +176,7 @@ func (s *stepstone) fetchOffers(ctx context.Context, query *db.GetQueryScraperRo
 	}
 
 	r := &response{}
-	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+	if err := json.UnmarshalRead(resp.Body, r); err != nil {
 		return nil, fmt.Errorf("failed to decode response body in stepstone.fetchOffers: %w", err)
 	}
 

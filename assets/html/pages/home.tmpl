@@ -1,0 +1,33 @@
+{{define "container:title"}}container-index{{end}}
+
+{{define "page:content"}}
+<div class="centered-form">
+    <div id="content" class="spinner htmx-indicator">
+        <p>create a new RSS feed for your job search...</p>
+        <form
+            hx-post="/feeds"
+            hx-indicator=".spinner"
+            hx-target="#content"
+            hx-swap="innerHTML"
+        >
+            <input
+                type="text"
+                name="keywords"
+                placeholder="keywords, ie. barista"
+                pattern="[A-Za-z0-9 ]+"
+                required
+                oninput="this.setCustomValidity(this.validity.patternMismatch ? 'only letters and numbers are allowed' : '')" />
+            <input
+                type="text"
+                name="location"
+                placeholder="location, ie. berlin"
+                pattern="[A-Za-z ]+"
+                required
+                oninput="this.setCustomValidity(this.validity.patternMismatch ? 'only letters are allowed' : '')" />
+            <button type="submit">create RSS feed</button>
+        </form>
+    </div>
+    <p class="spinner htmx-indicator">Loading...</p>
+</div>
+<p class="help-text">how do I use this? <a href="/help">help!</a></p>
+{{end}}

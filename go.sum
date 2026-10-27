@@ -10,8 +10,8 @@ github.com/PuerkitoBio/goquery v1.13.0 h1:mqHbjD7Jmnul4DTR24LKTjo1uUmHUh072kteGV
 github.com/PuerkitoBio/goquery v1.13.0/go.mod h1:Hip5mdBL8K2wEGKJdr27sRaNwIdDajmCwB/ExUPwW+g=
 github.com/andybalholm/cascadia v1.3.5 h1:RLjq12WJy58dN6eCIQrz0bAGZkztHWsEPFxP53Y7Ms8=
 github.com/andybalholm/cascadia v1.3.5/go.mod h1:BLRmbRjpEtNKieZOCCvYj4RqN+KRA41GBe/5O+G93kM=
-github.com/approvals/go-approval-tests v1.6.2 h1:LoTraXaHEK/w4i+jzqzUSwF6VwOAKmp7hxM4UqAwfng=
-github.com/approvals/go-approval-tests v1.6.2/go.mod h1:i7AlHlLqLyxTby+MnSFgxkObjFlsywI46fnOitjMBiU=
+github.com/approvals/go-approval-tests v1.14.0 h1:TVCaKX2PR5m0xN3062cW9PC5Ptkx3kRytmNtm0Ap1+Q=
+github.com/approvals/go-approval-tests v1.14.0/go.mod h1:3HKg6haD0Wg6p1SiA8/xHWg/xu4qnsB73ocJoo6zNy8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=

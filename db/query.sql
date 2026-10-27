@@ -10,32 +10,17 @@ SELECT
 FROM
     queries;
 
--- name: GetQuery :one
-SELECT
-    *
-FROM
-    queries
-WHERE
-    keywords = $1
-    AND location = $2;
-
--- name: GetQueryByID :one
-SELECT
-    *
-FROM
-    queries
-WHERE
-    id = $1;
-
--- name: DeleteQuery :exec
-DELETE FROM queries
-WHERE
-    id = $1;
-
--- name: UpdateQueryQAT :exec
+-- name: GetAndUpdateQuery :one
 UPDATE queries
 SET
     queried_at = CURRENT_TIMESTAMP
+WHERE
+    keywords = $1
+    AND location = $2
+RETURNING *;
+
+-- name: DeleteQuery :exec
+DELETE FROM queries
 WHERE
     id = $1;
 

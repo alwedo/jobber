@@ -1,0 +1,83 @@
+services:
+  jobber:
+    command:
+      - -metrics
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.size=5GB"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./cfg/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./cfg/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - ./prometheus-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - jobber-network
+    depends_on:
+      - loki
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    volumes:
+      - ./cfg/grafana.yml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./grafana-data:/var/lib/grafana
+      - ./cfg/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    networks:
+      - jobber-network
+    environment:
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_BASIC_ENABLED=false
+    depends_on:
+      - prometheus
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    privileged: true
+    ports:
+      - "12345:12345"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - jobber-network
+    environment:
+      ALLOY_DEPLOY_MODE: docker
+    volumes:
+      - ./cfg/config.alloy:/etc/alloy/config.alloy
+      - /proc:/rootproc:ro
+      - /var/run/docker.sock.raw:/var/run/docker.sock
+      - /sys:/sys:ro
+      - /:/rootfs:ro
+      - /dev/disk/:/dev/disk:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    devices:
+      - /dev/kmsg
+    depends_on:
+      - jobber
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./cfg/loki-config.yaml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - jobber-network
+    depends_on:
+      - jobber
+

@@ -8,6 +8,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var Enabled bool
+
 // Metrics collection
 var (
 	httpRequests = prometheus.NewHistogramVec(
@@ -52,26 +54,16 @@ var (
 		},
 		[]string{"keywords", "location"},
 	)
-
-	// Labels: "portal", "keywords", "location", itemCount
-	ScraperJob = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "scraper_job_seconds",
-			Help:    "Scraper Job information.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"portal", "keywords", "location", "itemCount"},
-	)
 )
 
 func Init() {
+	Enabled = true
 	prometheus.MustRegister(
 		httpRequests,
 		httpRequestsTotal,
 		httpRequestsInFlight,
 		JobberScheduledQueries,
 		JobberNewQueries,
-		ScraperJob,
 	)
 }
 

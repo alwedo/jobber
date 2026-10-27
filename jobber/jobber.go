@@ -108,7 +108,9 @@ func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) err
 		slog.String("keywords", keywords),
 		slog.String("location", location),
 	)
-	metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
+	if metrics.Enabled {
+		metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
+	}
 
 	done := make(chan struct{})
 	var tasks atomic.Int64
@@ -140,31 +142,25 @@ func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) err
 // ListOffers return the list of offers for a given query's keywords
 // and location and the last time the query was updated to calculate
 // the Cache-Control header. Returns sql.ErrNoRows for non-existent query.
-func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetQueryParams) ([]*db.Offer, *pgtype.Timestamptz, error) {
-	q, err := j.db.GetQuery(ctx, gqp)
+func (j *Jobber) ListOffers(ctx context.Context, gqp *db.GetAndUpdateQueryParams) ([]*db.Offer, pgtype.Timestamptz, error) {
+	var uat pgtype.Timestamptz
+	q, err := j.db.GetAndUpdateQuery(ctx, gqp)
 	if err != nil {
-		return nil, nil, fmt.Errorf("getting query in jobber.ListOffers: %w", err)
+		return nil, uat, fmt.Errorf("getting query in jobber.ListOffers: %w", err)
 	}
-	if err := j.db.UpdateQueryQAT(ctx, q.ID); err != nil {
-		j.logger.Error("unable to update query timestamp in jobber.ListOffers", slog.Int64("queryID", q.ID), slog.String("error", err.Error()))
-	}
+	uat = q.UpdatedAt
+
 	o, err := j.db.ListOffers(ctx, q.ID)
 	if err != nil {
-		return o, nil, fmt.Errorf("listing offers in jobber.ListOffers: %w", err)
+		return o, uat, fmt.Errorf("listing offers in jobber.ListOffers: %w", err)
 	}
-	return o, &q.UpdatedAt, nil
+	return o, uat, nil
 }
 
-func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
-	logAttr := []any{slog.Int64("queryID", qID), slog.String("scraper", scraperName)}
+func (j *Jobber) runQuery(ctx context.Context, qID int64, s scrape.Scraper) {
+	logAttr := []any{slog.Int64("queryID", qID), slog.String("scraper", s.Name())}
 
-	s, ok := j.scrList[scraperName]
-	if !ok {
-		j.logger.Error("unable to find scraper in jobber.runQuery", logAttr...)
-		return
-	}
-
-	q, err := j.db.GetQueryScraper(ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: scraperName})
+	q, err := j.db.GetQueryScraper(ctx, &db.GetQueryScraperParams{ID: qID, ScraperName: s.Name()})
 	if err != nil {
 		j.logger.Error("unable to get query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		return
@@ -177,7 +173,9 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 			j.logger.Error("unable to delete query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 		j.sched.RemoveByTags(q.Keywords + q.Location)
-		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Sub(float64(len(j.scrList)))
+		if metrics.Enabled {
+			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Sub(float64(len(j.scrList)))
+		}
 
 		j.logger.Info("deleting unused query", logAttr...)
 		return
@@ -186,11 +184,6 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 	offers, err := s.Scrape(ctx, q)
 	if err != nil {
 		j.logger.Error("scrape in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
-		// We only return after an error if there are no offers since
-		// some cases (ie, too many requests) will have partial results.
-		if len(offers) == 0 {
-			return
-		}
 	}
 
 	if len(offers) > 0 {
@@ -206,7 +199,7 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, scraperName string) {
 				j.logger.Error("unable to create query offer association in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 			}
 		}
-		if err := j.db.UpdateQueryScrapedAt(ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: scraperName}); err != nil {
+		if err := j.db.UpdateQueryScrapedAt(ctx, &db.UpdateQueryScrapedAtParams{QueryID: q.ID, ScraperName: s.Name()}); err != nil {
 			j.logger.Error("unable to update scraper timestamp in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
 		}
 	}
@@ -227,8 +220,8 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	// jobs firing after the query has already been deleted.
 	var stagger int
 
-	for name := range j.scrList {
-		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, name)}
+	for _, s := range j.scrList {
+		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, s.Name())}
 		opts = append(opts, o...)
 
 		minute := q.CreatedAt.Time.Minute() + stagger
@@ -241,19 +234,20 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 
 		job, err := j.sched.NewJob(
 			gocron.CronJob(cron, false),
-			gocron.NewTask(func(q int64) { j.runQuery(j.ctx, q, name) }, q.ID),
+			gocron.NewTask(func(q int64) { j.runQuery(j.ctx, q, s) }, q.ID),
 			opts...,
 		)
 		if err != nil {
 			j.logger.Error("unable to schedule query in jobber.scheduleQuery",
 				slog.Int64("queryID", q.ID),
-				slog.String("scraper", name),
+				slog.String("scraper", s.Name()),
 				slog.String("error", err.Error()),
 			)
 			continue
 		}
-
-		metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+name, cron).Inc()
+		if metrics.Enabled {
+			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+s.Name(), cron).Inc()
+		}
 		j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
 	}
 }

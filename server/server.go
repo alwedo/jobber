@@ -1,120 +1,156 @@
 package server
 
 import (
+	"context"
 	"database/sql"
-	"embed"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
+	"syscall"
 	"time"
 
+	"github.com/alwedo/jobber/assets"
 	"github.com/alwedo/jobber/db"
 	"github.com/alwedo/jobber/jobber"
 	"github.com/alwedo/jobber/metrics"
+	"github.com/alwedo/jobber/scrape"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
-	// Path Params.
-	pathParamStatic = "static"
-
 	// Query Params.
 	queryParamKeywords = "keywords"
 	queryParamLocation = "location"
-
-	// Static assets.
-	assetStyle  = "assets/css/style.css"
-	assetScript = "assets/js/script.js"
-
-	// Templates.
-	tmplIndex          = "index.gohtml"
-	tmplHelp           = "help.gohtml"
-	tmplFeedRSS        = "feed_rss.goxml"
-	tmplFeedHTML       = "feed_html.gohtml"
-	tmplCreateResponse = "create_response.gohtml"
 )
-
-//go:embed assets/*
-var assets embed.FS
-
-// Static files validation regex.
-var isMainStyle = regexp.MustCompile(`^style\.v[\d.]+\.css$`)
-var isMainScript = regexp.MustCompile(`^script\.v[\d.]+\.js$`)
 
 // Input validation regex.
 var isValidKeywords = regexp.MustCompile(`^[A-Za-z0-9 ]+$`)
 var isValidLocation = regexp.MustCompile(`^[A-Za-z ]+$`)
 
-type server struct {
-	logger    *slog.Logger
-	jobber    *jobber.Jobber
-	templates *template.Template
-}
+func Start(ctx context.Context, w io.Writer, getenv func(string) string, args []string) error {
+	fs := flag.NewFlagSet("server", flag.ExitOnError)
+	var hasMock bool
+	fs.BoolVar(&hasMock, "mock", false, "") // Sets the scraper to a mock. Used for testing.
+	var hasMockTimeout bool
+	fs.BoolVar(&hasMockTimeout, "mockTimeout", false, "") // Sets the scraper mock timeout. Used for testing.
+	var hasMetrics bool
+	fs.BoolVar(&hasMetrics, "metrics", false, "") // Enables the /metrics endpoint.
+	var port string
+	fs.StringVar(&port, "port", ":80", "") // Sets the server port. Default port is 80.
+	if err := fs.Parse(args[1:]); err != nil {
+		return fmt.Errorf("parsing command lines: %w", err)
+	}
 
-func New(l *slog.Logger, j *jobber.Jobber) (*http.Server, error) {
-	t, err := template.New("").Funcs(funcMap).ParseFS(assets, "assets/templates/*")
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	l := slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	conn, err := pgxpool.New(ctx, getenv("DB_CONN"))
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse templates: %v", err)
+		return fmt.Errorf("unable to initialize db connection: %w", err)
 	}
-	s := &server{logger: l, jobber: j, templates: t}
+	defer conn.Close()
+	if err := conn.Ping(ctx); err != nil {
+		return fmt.Errorf("unable to ping database: %w", err)
+	}
+
+	r, err := newHTMLRenderer(assets.HTMLFiles, "base.tmpl", "xmlfeed.tmpl", "partials/*.tmpl")
+	if err != nil {
+		return fmt.Errorf("unable to parse templates: %w", err)
+	}
+
+	var jbrOpts []jobber.Options
+	if hasMock {
+		jbrOpts = append(jbrOpts, jobber.WithScrapeList(scrape.MockList))
+	}
+	if hasMockTimeout {
+		jbrOpts = append(jbrOpts, jobber.WithTimeOut(time.Nanosecond))
+	}
+	j, jCloser := jobber.New(ctx, l, db.New(conn), jbrOpts...)
+	defer jCloser()
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /feeds", s.feed())
-	mux.HandleFunc("POST /feeds", s.create())
-	mux.Handle("GET /metrics", promhttp.Handler())
-	mux.HandleFunc("GET /help", s.help())
-	mux.HandleFunc("GET /", s.index())
-	mux.HandleFunc("GET /static/{static}", s.static())
+	mux.HandleFunc("GET /feeds", feed(l, r, j))
+	mux.HandleFunc("POST /feeds", create(l, r, j))
+	mux.HandleFunc("GET /help", help(l, r))
+	mux.HandleFunc("GET /{$}", index(l, r))
+	mux.Handle("GET /static/", staticHeadersMiddleware(http.StripPrefix("/static", http.FileServerFS(assets.StaticFiles))))
+	mux.HandleFunc("GET /healthz", func(_ http.ResponseWriter, _ *http.Request) {})
 
-	return &http.Server{
-		Addr:              ":80",
-		Handler:           metrics.HTTPMiddleware(mux),
+	var handler http.Handler = mux
+	if hasMetrics {
+		mux.Handle("GET /metrics", promhttp.Handler())
+		metrics.Init()
+		handler = metrics.HTTPMiddleware(handler)
+	}
+	httpServer := &http.Server{
+		Addr:              port,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
-	}, nil
-}
-
-func (s *server) index() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		if err := s.templates.ExecuteTemplate(w, tmplIndex, nil); err != nil {
-			s.internalError(w, "failed to execute template in server.index", err)
-			return
-		}
 	}
+
+	srvErr := make(chan error, 1)
+	go func() {
+		l.Info("listening on", slog.String("address", httpServer.Addr))
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			srvErr <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(ctx); err != nil {
+			return fmt.Errorf("error shutting down http server: %w", err)
+		}
+	case err := <-srvErr:
+		return fmt.Errorf("error in ListenAndServe: %w", err)
+	}
+
+	return nil
 }
 
-func (s *server) help() http.HandlerFunc {
+func index(log *slog.Logger, h *htmlRenderer) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		if err := s.templates.ExecuteTemplate(w, tmplHelp, nil); err != nil {
-			s.internalError(w, "failed to execute template in server.help", err)
-			return
+		if err := h.render(w, nil, "base", "pages/home.tmpl"); err != nil {
+			internalError(w, log, "failed to execute template in server.index", err)
 		}
 	}
 }
 
-func (s *server) create() http.HandlerFunc {
+func help(log *slog.Logger, h *htmlRenderer) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		if err := h.render(w, nil, "base", "pages/help.tmpl"); err != nil {
+			internalError(w, log, "failed to execute template in server.help", err)
+		}
+	}
+}
+
+func create(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			s.logger.Info("missing params in server.create", slog.String("error", err.Error()))
+			log.Info("validateParams in server.create", slog.String("error", err.Error()))
 			return
 		}
 
 		var timedOut bool
-		if err := s.jobber.CreateQuery(r.Context(), params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
+		if err := j.CreateQuery(r.Context(), params.Get(queryParamKeywords), params.Get(queryParamLocation)); err != nil {
 			if errors.Is(err, jobber.ErrTimedOut) {
 				timedOut = true
 			} else {
-				s.internalError(w, "failed to create query", err)
+				internalError(w, log, "failed to create query", err)
 				return
 			}
 		}
@@ -125,7 +161,7 @@ func (s *server) create() http.HandlerFunc {
 		}
 		u, err := url.Parse(scheme + r.Host + "/feeds")
 		if err != nil {
-			s.internalError(w, "failed to parse url in server.create", err)
+			internalError(w, log, "failed to parse url in server.create", err)
 			return
 		}
 		u.RawQuery = params.Encode()
@@ -135,25 +171,17 @@ func (s *server) create() http.HandlerFunc {
 			TimedOut bool
 		}{u.String(), timedOut}
 
-		if err := s.templates.ExecuteTemplate(w, tmplCreateResponse, data); err != nil {
-			s.internalError(w, "failed to execute template in server.create", err)
-			return
+		if err := h.render(w, data, "partial:response:create"); err != nil {
+			internalError(w, log, "failed to execute template in server.create", err)
 		}
 	}
 }
 
-type feedData struct {
-	Keywords string
-	Location string
-	Host     string
-	Offers   []*db.Offer
-}
-
-func (s *server) feed() http.HandlerFunc {
+func feed(log *slog.Logger, h *htmlRenderer, j *jobber.Jobber) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params, err := validateParams([]string{queryParamKeywords, queryParamLocation}, w, r)
 		if err != nil {
-			s.logger.Info("missing params in server.feed", slog.String("error", err.Error()))
+			log.Info("validateParams in server.feed", slog.String("error", err.Error()))
 			return
 		}
 		var (
@@ -161,7 +189,7 @@ func (s *server) feed() http.HandlerFunc {
 			location = params.Get(queryParamLocation)
 		)
 
-		offers, updatedAt, err := s.jobber.ListOffers(r.Context(), &db.GetQueryParams{
+		offers, updatedAt, err := j.ListOffers(r.Context(), &db.GetAndUpdateQueryParams{
 			Keywords: keywords,
 			Location: location,
 		})
@@ -169,87 +197,74 @@ func (s *server) feed() http.HandlerFunc {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.NotFound(w, r)
 			} else {
-				s.internalError(w, "failed to get query in server.feed", err)
+				internalError(w, log, "failed to get query in server.feed", err)
 			}
 			return
 		}
-		if updatedAt != nil && updatedAt.Valid {
+		if updatedAt.Valid && time.Since(updatedAt.Time) < time.Hour {
 			// We set a Cache-Control header with max-age so clients don't
 			// waste time re-fetching information that hasn't been updated.
 			// Since the queries get updated hourly, we want the max-age value
 			// to be time in seconds until the next update.
 			// If the calculated value is more than one hour we don't retun the
 			// header since we can't guarantee when the next update will be.
-			lastUpdate := time.Since(updatedAt.Time)
-			if lastUpdate < time.Hour {
-				t := time.Hour - lastUpdate
-				w.Header().Add("Cache-Control", "max-age="+strconv.Itoa(int(t.Seconds())))
-			}
+			t := time.Hour - time.Since(updatedAt.Time)
+			w.Header().Set("Cache-Control", "max-age="+strconv.FormatInt(int64(t/time.Second), 10))
 		}
 
-		var tmpl string
 		// Set template and Content-Type header based on Accept header.
 		// If Accept header is 'text/html' we assue the request is coming
 		// from a browser, otherwise it's an RSS reader.
-		switch strings.Contains(r.Header.Get("Accept"), "text/html") {
-		case true:
-			tmpl = tmplFeedHTML
-			w.Header().Add("Content-Type", "text/html")
-		default:
-			tmpl = tmplFeedRSS
-			w.Header().Add("Content-Type", "application/rss+xml")
+		ct := "application/rss+xml"
+		tmpl := "xmlfeed"
+		var addtmpl []string
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			ct = "text/html"
+			tmpl = "base"
+			addtmpl = []string{"pages/feed.tmpl"}
 		}
+		w.Header().Add("Content-Type", ct)
 
-		if err := s.templates.ExecuteTemplate(w, tmpl, &feedData{
+		data := struct {
+			Keywords string
+			Location string
+			Host     string
+			Offers   []*db.Offer
+		}{
 			Keywords: keywords,
 			Location: location,
 			Host:     r.Host,
 			Offers:   offers,
-		}); err != nil {
-			s.internalError(w, "failed to execute template in server.feed", err)
-			return
+		}
+
+		if err := h.render(w, data, tmpl, addtmpl...); err != nil {
+			internalError(w, log, "failed to execute template in server.feed", err)
 		}
 	}
 }
 
-func (s *server) static() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var a string
+func staticHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/static/")
+
 		var ct string
-
-		path := r.PathValue(pathParamStatic)
-
 		switch {
-		case isMainStyle.MatchString(path):
-			a = assetStyle
+		case strings.HasPrefix(path, "css/"):
 			ct = "text/css"
-		case isMainScript.MatchString(path):
-			a = assetScript
+		case strings.HasPrefix(path, "js/"):
 			ct = "application/javascript"
-		default:
-			http.NotFound(w, r)
-			return
 		}
 
-		f, err := assets.Open(a)
-		if err != nil {
-			s.internalError(w, "failed to open asset file "+a, err)
-			return
+		if ct != "" {
+			w.Header().Add("Content-Type", ct)
+			w.Header().Add("Cache-Control", "public, max-age=31536000, immutable")
+			w.Header().Add("X-Content-Type-Options", "nosniff")
 		}
-
-		w.Header().Add("Content-Type", ct)
-		w.Header().Add("Cache-Control", "public, max-age=31536000, immutable")
-		w.Header().Add("X-Content-Type-Options", "nosniff")
-
-		_, err = io.Copy(w, f)
-		if err != nil {
-			s.internalError(w, "failed to serve "+a, err)
-			return
-		}
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
-func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
+func internalError(w http.ResponseWriter, l *slog.Logger, msg string, err error) {
 	// If the client disconnected (broken pipe / connection reset) avoid
 	// attempting further writes which will only produce noise (and the
 	// superfluous WriteHeader log). Log at info and return.
@@ -258,11 +273,11 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 		errStr = err.Error()
 	}
 	if strings.Contains(errStr, "broken pipe") || strings.Contains(errStr, "connection reset by peer") {
-		s.logger.Info(msg, slog.String("error", errStr))
+		l.Info(msg, slog.String("error", errStr))
 		return
 	}
 
-	s.logger.Error(msg, slog.String("error", errStr))
+	l.Error(msg, slog.String("error", errStr))
 	http.Error(w, "it's not you it's me", http.StatusInternalServerError)
 }
 
@@ -270,10 +285,14 @@ func (s *server) internalError(w http.ResponseWriter, msg string, err error) {
 // If a param is missing or contains invalid characters, it will respond with 400.
 func validateParams(params []string, w http.ResponseWriter, r *http.Request) (url.Values, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1024)
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-		return nil, fmt.Errorf("request body too large: %w", err)
+	if err := r.ParseForm(); err != nil {
+		var maxErr *http.MaxBytesError
+		if ok := errors.As(err, &maxErr); ok {
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return nil, fmt.Errorf("request body too large: %w", err)
+		}
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return nil, fmt.Errorf("parsing form: %w", err)
 	}
 
 	missing := []string{}
@@ -308,13 +327,4 @@ func validateParams(params []string, w http.ResponseWriter, r *http.Request) (ur
 		return nil, fmt.Errorf("missing params in validateParams: %v", missing)
 	}
 	return valid, nil
-}
-
-var funcMap = template.FuncMap{
-	"pubDate": func(o *db.Offer) string {
-		return o.PostedAt.Time.Format(time.RFC1123Z)
-	},
-	"postedAt": func(o *db.Offer) string {
-		return o.PostedAt.Time.Format("Jan 2")
-	},
 }

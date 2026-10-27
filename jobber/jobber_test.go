@@ -1,7 +1,6 @@
 package jobber
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"io"
@@ -15,9 +14,11 @@ import (
 )
 
 func TestConstructor(t *testing.T) {
+	t.Parallel()
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
-	defer dbCloser()
+	pool, closer := db.NewTestDB(t)
+	defer closer()
+	d := db.New(pool)
 	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.MockList))
 	defer jCloser()
 
@@ -45,12 +46,14 @@ func TestConstructor(t *testing.T) {
 }
 
 func TestCreateQuery(t *testing.T) {
+	t.Parallel()
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
-	defer dbCloser()
+	pool, closer := db.NewTestDB(t)
+	defer closer()
+	d := db.New(pool)
 	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{
-		"mock":  scrape.Mock,
-		"mock2": scrape.Mock,
+		scrape.Mock,
+		scrape.Mock2,
 	}))
 	defer jCloser()
 
@@ -60,7 +63,7 @@ func TestCreateQuery(t *testing.T) {
 		if err := j.CreateQuery(t.Context(), k, l); err != nil {
 			t.Fatalf("failed to create query: %s", err)
 		}
-		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: k, Location: l})
+		q, err := d.GetAndUpdateQuery(t.Context(), &db.GetAndUpdateQueryParams{Keywords: k, Location: l})
 		if err != nil {
 			t.Errorf("failed to get query: %s", err)
 		}
@@ -90,7 +93,7 @@ func TestCreateQuery(t *testing.T) {
 		if err := j.CreateQuery(t.Context(), "golang", "berlin"); err != nil {
 			t.Fatalf("failed to create existing query: %s", err)
 		}
-		q, err := d.ListQueries(context.Background())
+		q, err := d.ListQueries(t.Context())
 		if err != nil {
 			t.Fatalf("failed to list queries: %s", err)
 		}
@@ -106,19 +109,21 @@ func TestCreateQuery(t *testing.T) {
 }
 
 func TestCreateWithTimeOut(t *testing.T) {
+	t.Parallel()
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
-	defer dbCloser()
+	pool, closer := db.NewTestDB(t)
+	defer closer()
+	d := db.New(pool)
 	sl := scrape.List{
-		"mock":  scrape.MockWithDelay,
-		"mock2": scrape.Mock,
-		"mock3": scrape.MockWithErr,
+		scrape.MockWithDelay,
+		scrape.Mock,
+		scrape.MockWithErr,
 	}
 	j, jCloser := New(t.Context(), l, d, WithScrapeList(sl), WithTimeOut(time.Nanosecond))
 	defer jCloser()
-	err := j.CreateQuery(t.Context(), "cuak", "squeek")
-	if !errors.Is(err, ErrTimedOut) {
-		t.Errorf("wanted err to be ErrTimedOut, got: %v", err)
+	cqErr := j.CreateQuery(t.Context(), "cuak", "squeek")
+	if !errors.Is(cqErr, ErrTimedOut) {
+		t.Errorf("wanted err to be ErrTimedOut, got: %v", cqErr)
 	}
 
 	// Ensure new tasks were run immediately by checking if they
@@ -135,9 +140,11 @@ func TestCreateWithTimeOut(t *testing.T) {
 }
 
 func TestListOffers(t *testing.T) {
+	t.Parallel()
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
-	defer dbCloser()
+	pool, closer := db.NewTestDB(t)
+	defer closer()
+	d := db.New(pool)
 	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.MockList))
 	defer jCloser()
 
@@ -175,7 +182,7 @@ func TestListOffers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o, _, err := j.ListOffers(context.Background(), &db.GetQueryParams{
+			o, _, err := j.ListOffers(t.Context(), &db.GetAndUpdateQueryParams{
 				Keywords: tt.keywords,
 				Location: tt.location,
 			})
@@ -194,29 +201,30 @@ func TestListOffers(t *testing.T) {
 }
 
 func TestRunQuery(t *testing.T) {
+	t.Parallel()
 	l := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	d, dbCloser := db.NewTestDB(t)
-	defer dbCloser()
-	mockScraperName := "Mock"
-	mockScraper := scrape.Mock
-	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{mockScraperName: mockScraper}))
+	pool, closer := db.NewTestDB(t)
+	defer closer()
+	d := db.New(pool)
+	s := scrape.Mock
+	j, jCloser := New(t.Context(), l, d, WithScrapeList(scrape.List{s}))
 	defer jCloser()
 
 	t.Run("with valid query", func(t *testing.T) {
 		qID := int64(3) // ID 3 is golang-berlin
-		q, err := d.GetQueryScraper(context.Background(), &db.GetQueryScraperParams{ID: qID, ScraperName: mockScraperName})
+		q, err := d.GetQueryScraper(t.Context(), &db.GetQueryScraperParams{ID: qID, ScraperName: s.Name()})
 		if err != nil {
 			t.Errorf("unable to retrieve seed query: %v", err)
 		}
-		j.runQuery(t.Context(), q.ID, mockScraperName)
+		j.runQuery(t.Context(), q.ID, s)
 
 		t.Run("it calls the scraper", func(t *testing.T) {
-			if *mockScraper.LastQuery != *q {
-				t.Errorf("wanted ran query to be %v, got %v", q, mockScraper.LastQuery)
+			if *s.LastQuery != *q {
+				t.Errorf("wanted ran query to be %v, got %v", q, s.LastQuery)
 			}
 		})
 		t.Run("it updates the UpdatedAt field used for removing old queries", func(t *testing.T) {
-			qq, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "golang", Location: "berlin"})
+			qq, err := d.GetAndUpdateQuery(t.Context(), &db.GetAndUpdateQueryParams{Keywords: "golang", Location: "berlin"})
 			if err != nil {
 				t.Errorf("unable to retrieve seed query: %v", err)
 			}
@@ -228,14 +236,16 @@ func TestRunQuery(t *testing.T) {
 	})
 
 	t.Run("with older than 7 days query deletes the query", func(t *testing.T) {
-		q, err := d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "python", Location: "san francisco"})
-		if err != nil {
-			t.Errorf("unable to retrieve seed query: %v", err)
+		row := pool.QueryRow(t.Context(), `SELECT id FROM queries WHERE keywords='python' AND location='san francisco';`)
+		var sq db.Query
+		if err := row.Scan(&sq.ID); err != nil {
+			t.Errorf("scanning rows %v", err)
 		}
-		j.runQuery(t.Context(), q.ID, mockScraperName)
-		_, err = d.GetQuery(context.Background(), &db.GetQueryParams{Keywords: "python", Location: "san francisco"})
+
+		j.runQuery(t.Context(), sq.ID, s)
+		q, err := d.GetAndUpdateQuery(t.Context(), &db.GetAndUpdateQueryParams{Keywords: "python", Location: "san francisco"})
 		if !errors.Is(err, sql.ErrNoRows) {
-			t.Errorf("query should have been deleted but got: %v", err)
+			t.Errorf("expected sql.ErrNoRows after deletion, got: %v (q=%v)", err, q)
 		}
 	})
 }

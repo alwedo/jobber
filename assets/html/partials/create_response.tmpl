@@ -1,9 +1,10 @@
+{{define "partial:response:create" -}}
 <p class="container-create-response">
     {{ if .TimedOut }}
     while your search query has been created, we will need some more time to fetch all the current offers. <br>
     please save the URL and check back in 5 minutes or so.<br><br>
     {{ else }}
-    done! 
+    done!
     {{ end -}}
     your RSS link is:<br>
     <i>{{.URL}}</i><br><br>
@@ -18,3 +19,4 @@
         <button type="button">create another RSS feed</button>
     </a>
 </p>
+{{end}}
