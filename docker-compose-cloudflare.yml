@@ -1,0 +1,15 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token
+      - ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN to your Cloudflare Tunnel token}
+    restart: unless-stopped
+    networks:
+      - jobber-network
+    depends_on:
+      - jobber

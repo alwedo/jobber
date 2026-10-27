@@ -23,7 +23,15 @@ lint:
 
 .PHONY: build
 build: migrate-up
-	DB_CONN=$(DB_CONN) docker compose up -d --build
+	DB_CONN=$(DB_CONN) docker compose -f docker-compose.yml up -d --build
+
+.PHONY: build-metrics
+build-metrics: migrate-up
+	DB_CONN=$(DB_CONN) docker compose -f docker-compose.yml -f docker-compose-metrics.yml up -d --build
+
+.PHONY: build-cloudflare
+build-cloudflare: migrate-up
+	DB_CONN=$(DB_CONN) docker compose -f docker-compose.yml -f docker-compose-metrics.yml -f docker-compose-cloudflare.yml up -d --build
 
 .PHONY: db-up
 db-up:

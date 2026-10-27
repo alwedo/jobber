@@ -26,11 +26,13 @@ Make sure you have [go](https://go.dev/doc/install), [Docker](https://docs.docke
 
 ### Production mode
 
-This will build the db, the server and all the M&O infrastructure in Docker.
+The deployment options are:
 
-- Start production mode with `make build`
+- `make build` builds Jobber and PostgreSQL only.
+- `make build-metrics` adds the Prometheus/Grafana/logging stack and enables Jobber metrics.
+- `make build-cloudflare` adds the metrics stack and Cloudflare Tunnel. Set `CLOUDFLARE_TUNNEL_TOKEN` first.
 
-Once up, try `http://localhost` for your local version of jobber, or go to the Grafana dashboard with `http://localhost:3000/dashboards`.
+Once up, try `http://localhost` for your local version of Jobber. The metrics option also exposes the Grafana dashboard at `http://localhost:3000/dashboards`.
 
 ### Developer mode
 
@@ -44,7 +46,7 @@ Once up, try `http://localhost` for your local dev version of jobber.
 
 The server can be configured with the following environment variable and command-line options:
 
-- `DB_CONN` sets the PostgreSQL connection string. The `make run` and `make build` commands use the local database connection from the `Makefile` by default.
+- `DB_CONN` sets the PostgreSQL connection string. The `make run` and Compose build targets use the local database connection from the `Makefile` by default.
 - `-port` sets the address and port where the server listens. Defaults to `:80`.
 - `-metrics` enables the `/metrics` endpoint and Prometheus metrics middleware. Disabled by default.
 - `-mock` uses the mock scraper instead of the Live scrapers. This is intended for testing.
