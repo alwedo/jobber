@@ -13,7 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.25.0
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
-	golang.org/x/crypto/x509roots/fallback v0.0.0-20261026150906-19e424ee3413
+	golang.org/x/crypto/x509roots/fallback v0.0.0-20261027005312-1da6254a58cf
 )
 
 require (
@@ -50,7 +50,7 @@ require (
 	github.com/moby/moby/client v0.6.2 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/sys/sequential v0.7.0 // indirect
-	github.com/moby/sys/user v0.4.1 // indirect
+	github.com/moby/sys/user v0.5.0 // indirect
 	github.com/moby/sys/userns v0.2.1 // indirect
 	github.com/moby/term v0.5.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
