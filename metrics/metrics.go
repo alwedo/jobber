@@ -45,7 +45,7 @@ var (
 
 	JobberNewQueries = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "jobber_new_queries",
+			Name: "jobber_queries_created_total",
 			Help: "Total number of queries created.",
 		},
 	)
