@@ -76,6 +76,9 @@ func Start(ctx context.Context, w io.Writer, getenv func(string) string, args []
 	if hasMockTimeout {
 		jbrOpts = append(jbrOpts, jobber.WithTimeOut(time.Nanosecond))
 	}
+	if hasMetrics {
+		metrics.Init()
+	}
 	j, jCloser := jobber.New(ctx, l, db.New(conn), jbrOpts...)
 	defer jCloser()
 
@@ -90,7 +93,6 @@ func Start(ctx context.Context, w io.Writer, getenv func(string) string, args []
 	var handler http.Handler = mux
 	if hasMetrics {
 		mux.Handle("GET /metrics", promhttp.Handler())
-		metrics.Init()
 		handler = metrics.HTTPMiddleware(handler)
 	}
 	httpServer := &http.Server{

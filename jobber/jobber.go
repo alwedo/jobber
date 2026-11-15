@@ -109,7 +109,7 @@ func (j *Jobber) CreateQuery(ctx context.Context, keywords, location string) err
 		slog.String("location", location),
 	)
 	if metrics.Enabled {
-		metrics.JobberNewQueries.WithLabelValues(keywords, location).Inc()
+		metrics.JobberNewQueries.Inc()
 	}
 
 	done := make(chan struct{})
@@ -169,13 +169,15 @@ func (j *Jobber) runQuery(ctx context.Context, qID int64, s scrape.Scraper) {
 
 	// We remove queries that haven't been used for longer than 7 days.
 	if time.Since(q.QueriedAt.Time) > time.Hour*24*7 {
-		if err := j.db.DeleteQuery(ctx, q.ID); err != nil {
+		rowsDeleted, err := j.db.DeleteQuery(ctx, q.ID)
+		if err != nil {
 			j.logger.Error("unable to delete query in jobber.runQuery", append(logAttr, slog.String("error", err.Error()))...)
+			return
+		}
+		if rowsDeleted > 0 && metrics.Enabled {
+			metrics.JobberScheduledQueries.Dec()
 		}
 		j.sched.RemoveByTags(q.Keywords + q.Location)
-		if metrics.Enabled {
-			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location, "").Sub(float64(len(j.scrList)))
-		}
 
 		j.logger.Info("deleting unused query", logAttr...)
 		return
@@ -219,6 +221,7 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 	// subsequent scraper jobs. When not staggered that will lead to some
 	// jobs firing after the query has already been deleted.
 	var stagger int
+	var scheduled bool
 
 	for _, s := range j.scrList {
 		opts := []gocron.JobOption{gocron.WithTags(q.Keywords+q.Location, s.Name())}
@@ -245,10 +248,11 @@ func (j *Jobber) scheduleQuery(q *db.Query, o ...gocron.JobOption) {
 			)
 			continue
 		}
-		if metrics.Enabled {
-			metrics.JobberScheduledQueries.WithLabelValues(fmt.Sprintf("%d", q.ID), q.Keywords+q.Location+s.Name(), cron).Inc()
-		}
+		scheduled = true
 		j.logger.Info("scheduled query", slog.Int64("queryID", q.ID), slog.String("cron", cron), slog.Any("tags", job.Tags()))
+	}
+	if scheduled && metrics.Enabled {
+		metrics.JobberScheduledQueries.Inc()
 	}
 }
 

@@ -15,44 +15,39 @@ var (
 	httpRequests = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_requests_seconds",
-			Help:    "Duration, method, path, code.",
+			Help:    "HTTP request duration by method, route, and status code.",
 			Buckets: prometheus.DefBuckets,
 		},
-		[]string{"method", "path", "code"},
+		[]string{"method", "route", "code"},
 	)
 
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
-			Help: "Total HTTP requests.",
+			Help: "Total HTTP requests by method, route, and status code.",
 		},
-		[]string{"method", "path", "code"},
+		[]string{"method", "route", "code"},
 	)
 
-	httpRequestsInFlight = prometheus.NewGaugeVec(
+	httpRequestsInFlight = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "http_requests_in_flight",
 			Help: "In-flight HTTP requests.",
 		},
-		[]string{"path"},
 	)
 
-	// Labels: "id", "tags", "cron"
-	JobberScheduledQueries = prometheus.NewGaugeVec(
+	JobberScheduledQueries = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "jobber_schedulded_queries",
-			Help: "Total Schedulded Queries.",
+			Help: "Number of currently scheduled queries.",
 		},
-		[]string{"id", "tags", "cron"},
 	)
 
-	// Labels: "keywords", "location"
-	JobberNewQueries = prometheus.NewCounterVec(
+	JobberNewQueries = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "jobber_new_queries",
-			Help: "Total new Queries created.",
+			Help: "Total number of queries created.",
 		},
-		[]string{"keywords", "location"},
 	)
 )
 
@@ -73,8 +68,8 @@ func HTTPMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		httpRequestsInFlight.WithLabelValues(r.URL.Path).Inc()
-		defer httpRequestsInFlight.WithLabelValues(r.URL.Path).Dec()
+		httpRequestsInFlight.Inc()
+		defer httpRequestsInFlight.Dec()
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, code: 0}
 		next.ServeHTTP(rec, r)
@@ -83,9 +78,29 @@ func HTTPMiddleware(next http.Handler) http.Handler {
 		if code == 0 {
 			code = http.StatusOK
 		}
-		httpRequests.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(code)).Observe(d)
-		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(code)).Inc()
+		method := methodLabel(r.Method)
+		route := routeLabel(r)
+		httpRequests.WithLabelValues(method, route, strconv.Itoa(code)).Observe(d)
+		httpRequestsTotal.WithLabelValues(method, route, strconv.Itoa(code)).Inc()
 	})
+}
+
+func routeLabel(r *http.Request) string {
+	if r.Pattern == "" {
+		return "unmatched"
+	}
+	return r.Pattern
+}
+
+func methodLabel(method string) string {
+	switch method {
+	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead,
+		http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut,
+		http.MethodTrace:
+		return method
+	default:
+		return "OTHER"
+	}
 }
 
 type statusRecorder struct {
