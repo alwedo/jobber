@@ -19,7 +19,7 @@ WHERE
     AND location = $2
 RETURNING *;
 
--- name: DeleteQuery :exec
+-- name: DeleteQuery :execrows
 DELETE FROM queries
 WHERE
     id = $1;

@@ -258,13 +258,13 @@
             "uid": "PEF57EC2B9BFC4715"
           },
           "editorMode": "code",
-          "expr": "sum(jobber_new_queries)",
+          "expr": "sum(increase(jobber_queries_created_total[$__range]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "New Queries",
+      "title": "Queries Created",
       "type": "bargauge"
     },
     {

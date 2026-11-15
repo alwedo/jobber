@@ -94,15 +94,18 @@ func (q *Queries) DeleteOldOffers(ctx context.Context) error {
 	return err
 }
 
-const deleteQuery = `-- name: DeleteQuery :exec
+const deleteQuery = `-- name: DeleteQuery :execrows
 DELETE FROM queries
 WHERE
     id = $1
 `
 
-func (q *Queries) DeleteQuery(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteQuery, id)
-	return err
+func (q *Queries) DeleteQuery(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteQuery, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getAndUpdateQuery = `-- name: GetAndUpdateQuery :one
